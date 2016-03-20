@@ -45,10 +45,19 @@ class TomoScan(object):
         plt.plot(histogram[0])
         
         
-    def auto_set_angles(self, thresh = 170, order = 25, plot = True):
+    def auto_set_angles(self, thresh = None, order = 25, plot = True):
         
-        if thresh == 'otsu':
+        if thresh == None:
+            try: 
+                thresh = self.thresh
+            except AttributeError:
+                print('No threshold defined or recovered from proj_threshold '
+                      'method - attempting with thresh = 170.')
+                thresh = 170
+                
+        elif thresh == 'otsu':
             thresh = filters.threshold_otsu(self.im_stack[:, :, 0])
+            
         
         thresh_stack = (self.im_stack > thresh).astype(int)
         diff = [np.sum(np.abs(thresh_stack[:, :, i] - thresh_stack[:, :, 0])) \
@@ -128,15 +137,16 @@ class TomoScan(object):
         
         fig, ax_array = plt.subplots(1,2, figsize=(12, 5))
         
-        histogram = np.histogram(self.im_stack[:, :, proj], 255)[0]
+        #histogram = np.histogram(self.im_stack[:, :, proj], 255)[0]
         
         ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])  
         ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
         
-        ax_array[0].plot(histogram)
-        line, = ax_array[0].plot([0, 0], [0, np.max(histogram)], 'r-.')
-        ax_array[1].imshow(self.im_stack[:, :, proj])
+        ax_array[0].imshow(self.im_stack[:, :, proj])
+        #line, = ax_array[0].plot([0, 0], [0, np.max(histogram)], 'r-.')
+        ax_array[1].imshow(self.im_stack[:, :, proj] > 0)
         ax_array[1].axis('off')
+        ax_array[0].axis('off')
         fig.tight_layout()
         fig.subplots_adjust(bottom=0.2)
         window_slider = Slider(ax_slider, 'Thresh', 0, 255, valinit = 0)
@@ -145,14 +155,14 @@ class TomoScan(object):
         def slider_update(val):
             ax_array[1].imshow(self.im_stack[:, :, proj] > window_slider.val)
             window_slider.valtext.set_text('%i' % window_slider.val)
-            line.set_xdata([window_slider.val,  window_slider.val])
+            #line.set_xdata([window_slider.val,  window_slider.val])
             fig.canvas.draw_idle()
             
         window_slider.on_changed(slider_update)
         
         def store_data(label):
             
-            self.thresh = int(window_slider.val)
+            self.proj_thresh = int(window_slider.val)
             plt.close()
             
         store_button.on_clicked(store_data)
@@ -195,15 +205,17 @@ class TomoScan(object):
         fig, ax_array = plt.subplots(1,2, figsize=(12, 5))
         
         bins = np.max(self.recon_data[:, :, image]).astype(int)
-        histogram = np.histogram(self.recon_data[:, :, image], bins)[0]
+        #histogram = np.histogram(self.recon_data[:, :, image], bins)[0]
         
         ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])  
         ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
         
-        ax_array[0].plot(histogram)
-        line, = ax_array[0].plot([0, 0], [0, np.max(histogram)], 'r-.')
-        ax_array[1].imshow(self.recon_data[:, :, image])
+        #ax_array[0].plot(histogram)
+        #line, = ax_array[0].plot([0, 0], [0, np.max(histogram)], 'r-.')
+        ax_array[0].imshow(self.recon_data[:, :, image])
+        ax_array[1].imshow(self.recon_data[:, :, image] > 0)
         ax_array[1].axis('off')
+        ax_array[0].axis('off')
         fig.tight_layout()
         fig.subplots_adjust(bottom=0.2)
         window_slider = Slider(ax_slider, 'Thresh', 0, bins, valinit = 0)
@@ -212,7 +224,7 @@ class TomoScan(object):
         def slider_update(val):
             ax_array[1].imshow(self.recon_data[:,:, image] > window_slider.val)
             window_slider.valtext.set_text('%i' % window_slider.val)
-            line.set_xdata([window_slider.val,  window_slider.val])
+            #line.set_xdata([window_slider.val,  window_slider.val])
             fig.canvas.draw_idle()
             
         window_slider.on_changed(slider_update)
@@ -263,7 +275,7 @@ class LoadScan(TomoScan):
     
     def __init__(self, folder):
         self.folder = folder
-        files =  [fname for fname in os.listdir(folder) if fname[-4:] == '.tif']
+        files =  [f for f in os.listdir(folder) if f[-4:] == '.tif']
         im_shape = sc.misc.imread(os.path.join(self.folder, files[0])).shape
         self.im_stack = np.zeros(im_shape + (len(files), ))
         for idx, fname in enumerate(files):
