@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -18,9 +19,7 @@ import time
 #import cv2
 
 
-
-
-class TomoScan(AnalyzeScan):
+class TomoScan(object):
     
     def __init__(self, camera_port = 0):
         
@@ -170,7 +169,7 @@ class TomoScan(AnalyzeScan):
         mlab.show()
 
         
-class LoadScan(object):
+class LoadScan(TomoScan):
     
     def __init__(self, folder):
         self.folder = folder
