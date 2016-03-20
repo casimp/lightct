@@ -1,0 +1,27 @@
+# Python files
+*.pyc
+*.ipynb
+.pypirc
+
+#Docs
+/docs/_*
+description
+
+# Distribution / packaging
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Extra
+
+lightct/test/*
