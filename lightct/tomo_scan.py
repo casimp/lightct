@@ -10,7 +10,7 @@ import os
 import numpy as np
 import scipy as sc
 from scipy.signal import medfilt, argrelmin
-from skimage import filters, measure
+from skimage import filters, measure, color
 from skimage.transform import iradon, downscale_local_mean
 import matplotlib
 import matplotlib.pyplot as plt
@@ -34,7 +34,7 @@ class TomoScan(object):
         
         for i in range(proj):
             retval, im = camera.read()
-            self.im_stack[:, :, i] = skimage.color.rgb2hsv(im)[:, :, 2]
+            self.im_stack[:, :, i] = color.rgb2hsv(im)[:, :, 2]
             time.sleep(wait)
         del(camera)
 
@@ -91,7 +91,7 @@ class TomoScan(object):
             ax_array[1].axis('off')
             fig.tight_layout()
             fig.subplots_adjust(bottom=0.2)
-            window_slider = Slider(ax_slider, 'Image', 0, 100, valinit = 0)
+            window_slider = Slider(ax_slider, 'Image', 0, self.im_stack.shape[-1], valinit = 0)
             store_button = Button(ax_button, r'Save - 360')
             
             def slider_update(val):
@@ -116,6 +116,45 @@ class TomoScan(object):
             self.angles = np.linspace(0, ang_range, num_images)
             self.imstack = self.imstack[:, :, :num_images]
         
+    def threshold(self, proj = 0):
+            backend = matplotlib.get_backend()
+            err = ("Matplotlib running inline. Plot interaction not possible."
+                   "\nTry running %matplotlib in the ipython console (and "
+                   "%matplotlib inline to return to default behaviour). In "
+                   "standard console use matplotlib.use('TkAgg') to interact.")
+                     
+            assert backend != 'module://ipykernel.pylab.backend_inline', err
+            fig, ax_array = plt.subplots(1,2, figsize=(12, 5))
+            
+            histogram = np.histogram(self.im_stack[:, :, 0], 255)[0]
+            
+            ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])  
+            ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
+            
+            ax_array[0].plot(histogram)
+            line, = ax_array[0].plot([20, 20], [0, np.max(histogram)], 'r-.')
+            ax_array[1].imshow(self.im_stack[:, :, proj])
+            ax_array[1].axis('off')
+            fig.tight_layout()
+            fig.subplots_adjust(bottom=0.2)
+            window_slider = Slider(ax_slider, 'Thresh', 0, 255, valinit = 0)
+            store_button = Button(ax_button, r'Save')
+            
+            def slider_update(val):
+                ax_array[1].imshow(self.im_stack[:, :, proj] > window_slider.val)
+                window_slider.valtext.set_text('%i' % window_slider.val)
+                line.set_xdata([window_slider.val,  window_slider.val])
+                fig.canvas.draw_idle()
+                
+            window_slider.on_changed(slider_update)
+            
+            def store_data(label):
+                
+                self.thresh = int(window_slider.val)
+                plt.close()
+                
+            store_button.on_clicked(store_data)
+            return window_slider, store_button        
         
     def reconstruct(self, downsample = (4, 4, 1), pre_filter = True, 
                     kernel = 9, save = True):
@@ -173,11 +212,12 @@ class LoadScan(TomoScan):
     
     def __init__(self, folder):
         self.folder = folder
-        files =  [file for file in os.listdir(folder) if file[-4:] == '.tif']
-        im_shape = sc.misc.imread(folder + files[0]).shape
+        files =  [fname for fname in os.listdir(folder) if fname[-4:] == '.tif']
+        im_shape = sc.misc.imread(os.path.join(self.folder, files[0])).shape
         self.im_stack = np.zeros(im_shape + (len(files), ))
-        for idx, file in enumerate(files):
+        for idx, fname in enumerate(files):
             sys.stdout.write("\rProgress: [{0:20s}] {1:.0f}%".format('#' * 
             int(20*(idx + 1) / len(files)), 100*((idx + 1)/len(files))))
             sys.stdout.flush()
-            self.im_stack[:, :, idx] = sc.misc.imread(folder + file)
+            f = os.path.join(self.folder, fname)
+            self.im_stack[:, :, idx] = sc.misc.imread(f)
