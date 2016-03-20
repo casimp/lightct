@@ -7,14 +7,18 @@ What is lightct?
 Requirements
 ------------
 
-lightct is built on Python’s scientific stack (numpy, scipy, matplotlib). Additionally, the h5py package is required for the manipulation and management of the NeXus data files. Testing and development were carried out using the Anaconda (v 2.5.0) package manager, which built with the following versions:
+lightct is built on Python’s scientific stack (numpy, scipy, matplotlib, scikit-image). Testing and development were carried out using the Anaconda (v 2.5.0) package manager, which built with the following versions:
 
 -	Python: version 2.7.11
 -	numpy: version 1.10.4
 -	scipy: version 0.17
 -	matplotlib: version 1.5
--	h5py: version 2.5.0
--	skimage
+-	scikit-image: version 0.11.3
+
+The package also leverages opencv for the acquisition of images and (optionally) mayavi for the final 3D visulization:
+
+-	opencv: version 3.1
+-	mayavi: version 4.4
 
 Installation
 ------------
