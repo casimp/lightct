@@ -66,7 +66,7 @@ class TomoScan(object):
                      horizontalalignment='center', verticalalignment='bottom')
         
         self.num_images = minimas[0][0]
-        self.angle = np.linspace(0, 360, self.num_images)
+        self.angles = np.linspace(0, 360, self.num_images)
             
     
     def manual_set_angles(self, interactive = True, num_images = None, 
@@ -91,7 +91,8 @@ class TomoScan(object):
             ax_array[1].axis('off')
             fig.tight_layout()
             fig.subplots_adjust(bottom=0.2)
-            window_slider = Slider(ax_slider, 'Image', 0, self.im_stack.shape[-1], valinit = 0)
+            nfiles = self.im_stack.shape[-1]
+            window_slider = Slider(ax_slider, 'Image', 0, nfiles, valinit = 0)
             store_button = Button(ax_button, r'Save - 360')
             
             def slider_update(val):
@@ -116,45 +117,46 @@ class TomoScan(object):
             self.angles = np.linspace(0, ang_range, num_images)
             self.imstack = self.imstack[:, :, :num_images]
         
-    def threshold(self, proj = 0):
-            backend = matplotlib.get_backend()
-            err = ("Matplotlib running inline. Plot interaction not possible."
-                   "\nTry running %matplotlib in the ipython console (and "
-                   "%matplotlib inline to return to default behaviour). In "
-                   "standard console use matplotlib.use('TkAgg') to interact.")
-                     
-            assert backend != 'module://ipykernel.pylab.backend_inline', err
-            fig, ax_array = plt.subplots(1,2, figsize=(12, 5))
+    def proj_threshold(self, proj = 0):
+        backend = matplotlib.get_backend()
+        err = ("Matplotlib running inline. Plot interaction not possible."
+               "\nTry running %matplotlib in the ipython console (and "
+               "%matplotlib inline to return to default behaviour). In "
+               "standard console use matplotlib.use('TkAgg') to interact.")
+                 
+        assert backend != 'module://ipykernel.pylab.backend_inline', err
+        
+        fig, ax_array = plt.subplots(1,2, figsize=(12, 5))
+        
+        histogram = np.histogram(self.im_stack[:, :, proj], 255)[0]
+        
+        ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])  
+        ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
+        
+        ax_array[0].plot(histogram)
+        line, = ax_array[0].plot([0, 0], [0, np.max(histogram)], 'r-.')
+        ax_array[1].imshow(self.im_stack[:, :, proj])
+        ax_array[1].axis('off')
+        fig.tight_layout()
+        fig.subplots_adjust(bottom=0.2)
+        window_slider = Slider(ax_slider, 'Thresh', 0, 255, valinit = 0)
+        store_button = Button(ax_button, r'Save')
+        
+        def slider_update(val):
+            ax_array[1].imshow(self.im_stack[:, :, proj] > window_slider.val)
+            window_slider.valtext.set_text('%i' % window_slider.val)
+            line.set_xdata([window_slider.val,  window_slider.val])
+            fig.canvas.draw_idle()
             
-            histogram = np.histogram(self.im_stack[:, :, 0], 255)[0]
+        window_slider.on_changed(slider_update)
+        
+        def store_data(label):
             
-            ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])  
-            ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
+            self.thresh = int(window_slider.val)
+            plt.close()
             
-            ax_array[0].plot(histogram)
-            line, = ax_array[0].plot([20, 20], [0, np.max(histogram)], 'r-.')
-            ax_array[1].imshow(self.im_stack[:, :, proj])
-            ax_array[1].axis('off')
-            fig.tight_layout()
-            fig.subplots_adjust(bottom=0.2)
-            window_slider = Slider(ax_slider, 'Thresh', 0, 255, valinit = 0)
-            store_button = Button(ax_button, r'Save')
-            
-            def slider_update(val):
-                ax_array[1].imshow(self.im_stack[:, :, proj] > window_slider.val)
-                window_slider.valtext.set_text('%i' % window_slider.val)
-                line.set_xdata([window_slider.val,  window_slider.val])
-                fig.canvas.draw_idle()
-                
-            window_slider.on_changed(slider_update)
-            
-            def store_data(label):
-                
-                self.thresh = int(window_slider.val)
-                plt.close()
-                
-            store_button.on_clicked(store_data)
-            return window_slider, store_button        
+        store_button.on_clicked(store_data)
+        return window_slider, store_button    
         
     def reconstruct(self, downsample = (4, 4, 1), pre_filter = True, 
                     kernel = 9, save = True):
@@ -171,7 +173,7 @@ class TomoScan(object):
 
         for j in range(recon_height):
             sinotmp = np.squeeze(images[j, :, :])
-            imagetmp = iradon(sinotmp, theta = self.angle, 
+            imagetmp = iradon(sinotmp, theta = self.angles, 
                               filter = None, circle = True)
 
             self.recon_data[:, :, j] = imagetmp
@@ -180,10 +182,52 @@ class TomoScan(object):
                 if not os.path.exists(save_folder):
                     os.makedirs(save_folder)
                 sc.misc.imsave(save_folder + '/%04d.tif' % j, imagetmp)
-    
+
+    def recon_threshold(self, image = 0):
+        backend = matplotlib.get_backend()
+        err = ("Matplotlib running inline. Plot interaction not possible."
+               "\nTry running %matplotlib in the ipython console (and "
+               "%matplotlib inline to return to default behaviour). In "
+               "standard console use matplotlib.use('TkAgg') to interact.")
+                 
+        assert backend != 'module://ipykernel.pylab.backend_inline', err
+        
+        fig, ax_array = plt.subplots(1,2, figsize=(12, 5))
+        
+        bins = np.max(self.recon_data[:, :, image]).astype(int)
+        histogram = np.histogram(self.recon_data[:, :, image], bins)[0]
+        
+        ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])  
+        ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
+        
+        ax_array[0].plot(histogram)
+        line, = ax_array[0].plot([0, 0], [0, np.max(histogram)], 'r-.')
+        ax_array[1].imshow(self.recon_data[:, :, image])
+        ax_array[1].axis('off')
+        fig.tight_layout()
+        fig.subplots_adjust(bottom=0.2)
+        window_slider = Slider(ax_slider, 'Thresh', 0, bins, valinit = 0)
+        store_button = Button(ax_button, r'Save')
+        
+        def slider_update(val):
+            ax_array[1].imshow(self.recon_data[:,:, image] > window_slider.val)
+            window_slider.valtext.set_text('%i' % window_slider.val)
+            line.set_xdata([window_slider.val,  window_slider.val])
+            fig.canvas.draw_idle()
+            
+        window_slider.on_changed(slider_update)
+        
+        def store_data(label):
+            
+            self.thresh = int(window_slider.val)
+            plt.close()
+            
+        store_button.on_clicked(store_data)
+        return window_slider, store_button    
+        
     
     def vizualize(self, crop = 60, downsample = (2, 2, 2),  
-                  kernel = 9, thresh = 'otsu'):
+                  kernel = 9, thresh = None):
         
         data = self.recon_data[crop: -crop, crop: -crop, :]
         data = downscale_local_mean(data, downsample)
@@ -191,9 +235,16 @@ class TomoScan(object):
         for i in range(data.shape[2]):
             data[:, :, i] = medfilt(data[:, :, i], kernel_size = kernel)
         datathres = np.zeros(data.shape)
-
-        if thresh == 'otsu':
-            thresh = filters.threshold_otsu(data[:, :, 0]) + 0.08      
+        
+        if thresh == None:
+            try: 
+                thresh = self.thresh
+            except AttributeError:
+                error = ('Either manually define thresh variable or run '
+                         'recon_threshold method.')
+                raise AttributeError(error)
+        elif thresh == 'otsu':
+            thresh = filters.threshold_otsu(data)    
         
         for i in range(data.shape[2]):
             if (np.max(data[:, :, i])) >= 0.35:
