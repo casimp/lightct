@@ -4,7 +4,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from mayavi import mlab
+#from mayavi import mlab
 import sys
 import os
 import numpy as np
@@ -45,27 +45,20 @@ class TomoScan(object):
         plt.plot(histogram[0])
         
         
-    def auto_set_angles(self, thresh = None, order = 25, plot = True):
+       
+    def auto_set_angles(self, order = 25, plot = True):
         
-        if thresh == None:
-            try: 
-                thresh = self.thresh
-            except AttributeError:
-                print('No threshold defined or recovered from proj_threshold '
-                      'method - attempting with thresh = 170.')
-                thresh = 170
-                
-        elif thresh == 'otsu':
-            thresh = filters.threshold_otsu(self.im_stack[:, :, 0])
-            
-        
-        thresh_stack = (self.im_stack > thresh).astype(int)
-        diff = [np.sum(np.abs(thresh_stack[:, :, i] - thresh_stack[:, :, 0])) \
-                for i in range(thresh_stack.shape[-1])]
+        ref = downscale_local_mean(self.im_stack[:, :, 0], (3, 3))
+        diff = np.nan * np.ones((self.im_stack.shape[-1]))
+        for i in range(self.im_stack.shape[-1]):
+            current = downscale_local_mean(self.im_stack[:, :, i], (3, 3))
+            tmp = current - ref
+            diff[i] = tmp.std()
         minimas = argrelmin(np.array(diff), order = order)
+        self.num_images = minimas[0][0] + 1
+        self.angles = np.linspace(0, 360, self.num_images, dtype = int)
         
         if plot:
-            plt.figure()
             plt.plot(diff)
             plt.plot(minimas[0], np.array(diff)[minimas], 'r*')
             plt.plot([minimas[0][0], minimas[0][0]], [0, np.max(diff)], 'r--')
@@ -73,11 +66,12 @@ class TomoScan(object):
             plt.ylabel('Thresholded Pixels Relative to Image 1')
             plt.text(minimas[0][0], np.max(diff), r'$360^{\circ}$', 
                      horizontalalignment='center', verticalalignment='bottom')
+                     
+        print('%i images in a $360^{\circ}$ rotation: \n If this is incorrect '
+              'either rerun with a different value for order or use the manual'
+              ' method.' % self.num_images)
         
-        self.num_images = minimas[0][0]
-        self.angles = np.linspace(0, 360, self.num_images)
-            
-    
+        
     def manual_set_angles(self, interactive = True, num_images = None, 
                           ang_range = None):
         
@@ -100,8 +94,8 @@ class TomoScan(object):
             ax_array[1].axis('off')
             fig.tight_layout()
             fig.subplots_adjust(bottom=0.2)
-            nfiles = self.im_stack.shape[-1]
-            window_slider = Slider(ax_slider, 'Image', 0, nfiles, valinit = 0)
+            nfiles = self.im_stack.shape[-1] + 1
+            window_slider = Slider(ax_slider, 'Image', 1, nfiles, valinit = 0)
             store_button = Button(ax_button, r'Save - 360')
             
             def slider_update(val):
@@ -126,47 +120,6 @@ class TomoScan(object):
             self.angles = np.linspace(0, ang_range, num_images)
             self.imstack = self.imstack[:, :, :num_images]
         
-    def proj_threshold(self, proj = 0):
-        backend = matplotlib.get_backend()
-        err = ("Matplotlib running inline. Plot interaction not possible."
-               "\nTry running %matplotlib in the ipython console (and "
-               "%matplotlib inline to return to default behaviour). In "
-               "standard console use matplotlib.use('TkAgg') to interact.")
-                 
-        assert backend != 'module://ipykernel.pylab.backend_inline', err
-        
-        fig, ax_array = plt.subplots(1,2, figsize=(12, 5))
-        
-        #histogram = np.histogram(self.im_stack[:, :, proj], 255)[0]
-        
-        ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])  
-        ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
-        
-        ax_array[0].imshow(self.im_stack[:, :, proj])
-        #line, = ax_array[0].plot([0, 0], [0, np.max(histogram)], 'r-.')
-        ax_array[1].imshow(self.im_stack[:, :, proj] > 0)
-        ax_array[1].axis('off')
-        ax_array[0].axis('off')
-        fig.tight_layout()
-        fig.subplots_adjust(bottom=0.2)
-        window_slider = Slider(ax_slider, 'Thresh', 0, 255, valinit = 0)
-        store_button = Button(ax_button, r'Save')
-        
-        def slider_update(val):
-            ax_array[1].imshow(self.im_stack[:, :, proj] > window_slider.val)
-            window_slider.valtext.set_text('%i' % window_slider.val)
-            #line.set_xdata([window_slider.val,  window_slider.val])
-            fig.canvas.draw_idle()
-            
-        window_slider.on_changed(slider_update)
-        
-        def store_data(label):
-            
-            self.proj_thresh = int(window_slider.val)
-            plt.close()
-            
-        store_button.on_clicked(store_data)
-        return window_slider, store_button    
         
     def reconstruct(self, downsample = (4, 4, 1), pre_filter = True, 
                     kernel = 9, save = True):
