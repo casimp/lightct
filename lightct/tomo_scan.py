@@ -290,11 +290,13 @@ class TomoScan(object):
         elif thresh == 'otsu':
             thresh = filters.threshold_otsu(data)    
         
-        for i in range(data.shape[2]):
-            if (np.max(data[:, :, i])) >= 0.35:
-                datathres[:, :, i]=(data[:, :, i] >= thresh)
-            else :
-                datathres[:,:,i] = np.zeros(data.shape[:2])
+        datathres = data >= thresh
+
+#        for i in range(data.shape[2]):
+#            if (np.max(data[:, :, i])) >= 0.35:
+#                datathres[:, :, i]=(data[:, :, i] >= thresh)
+#            else :
+#                datathres[:,:,i] = np.zeros(data.shape[:2])
 
         verts, faces = measure.marching_cubes(datathres, 0)
         mlab.triangular_mesh([vert[0] for vert in verts],
