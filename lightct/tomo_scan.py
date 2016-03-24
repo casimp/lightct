@@ -87,10 +87,23 @@ class TomoScan(object):
               ' method.' % self.num_images)
         
         
-    def manual_set_angles(self, interactive = True, num_images = None, 
-                          ang_range = None):
+    def manual_set_angles(self, interact = True, proj_ref = 5, 
+                          num_images = None, ang_range = None):
+        """
+        Manually define the number of images in 360 degrees. Defaults to 
+        interactive mode in which images can be compared against initial, 
+        reference image.
         
-        if interactive:
+        # interact:   Run in interactive mode (True/False)
+        # proj_ref:   Projection to use as initial or reference projection.
+                      Recommended to be greater than 1 (due to acquisiton 
+                      spacing issues in intital projections)   
+        # num_images: If not in interact mode, manually specify number 
+                      of images
+        # ang_range:  If not in interact mode, manually specify angular range 
+                      of images (must be multiple of 180)
+        """
+        if interact:
             backend = matplotlib.get_backend()
             err = ("Matplotlib running inline. Plot interaction not possible."
                    "\nTry running %matplotlib in the ipython console (and "
@@ -103,14 +116,14 @@ class TomoScan(object):
             ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])  
             ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
             
-            ax_array[0].imshow(self.im_stack[:, :, 0])
-            ax_array[1].imshow(self.im_stack[:, :, 0])
+            ax_array[0].imshow(self.im_stack[:, :, proj_ref])
+            ax_array[1].imshow(self.im_stack[:, :, proj_ref])
             ax_array[0].axis('off')
             ax_array[1].axis('off')
             fig.tight_layout()
             fig.subplots_adjust(bottom=0.2)
             nfiles = self.im_stack.shape[-1] + 1
-            window_slider = Slider(ax_slider, 'Image', 1, nfiles, valinit = 0)
+            window_slider = Slider(ax_slider, 'Image', proj_ref, nfiles, valinit = 0)
             store_button = Button(ax_button, r'Save - 360')
             
             def slider_update(val):
@@ -121,9 +134,10 @@ class TomoScan(object):
             window_slider.on_changed(slider_update)
             
             def store_data(label):
-                
-                self.num_images = int(window_slider.val)
-                self.angles = np.linspace(0, 360, int(window_slider.val))
+                ### Check this is correct - proj_ref!!!
+                self.num_images = int(window_slider.val) - proj_ref + 1
+                self.angles = np.linspace(0, 360, self.num_images)
+                self.p0 = proj_ref
                 plt.close()
                 
             store_button.on_clicked(store_data)
