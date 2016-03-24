@@ -4,7 +4,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-#from mayavi import mlab
+from mayavi import mlab
 import sys
 import os
 import numpy as np
@@ -16,7 +16,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 import time
-#import cv2
+import cv2
 
 
 class TomoScan(object):
