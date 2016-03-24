@@ -46,28 +46,43 @@ class TomoScan(object):
         
         
        
-    def auto_set_angles(self, order = 25, plot = True):
+    def auto_set_angles(self, proj_ref = 5, order = 25, plot = True):
+        """
+        Attempts to automatically locate image at 360 degrees (and multiples
+        of 360 degrees). Alignment based on difference calculation between 
+        reference projection each subsequent projections. 
         
-        ref = downscale_local_mean(self.im_stack[:, :, 0], (3, 3))
-        diff = np.nan * np.ones((self.im_stack.shape[-1]))
-        for i in range(self.im_stack.shape[-1]):
+        # proj_ref:   Projection to use as initial or reference projection.
+                      Recommended to be greater than 1 (due to acquisiton 
+                      spacing issues in intital projections)   
+        # order:      Window in which to search for minimas in the
+                      difference calculations - should be approx equal to 
+                      (number of projections in 360) / 2
+        # plot:       Plot the difference results
+        """
+        ref = downscale_local_mean(self.im_stack[:, :, proj_ref], (3, 3))
+        diff = np.nan * np.ones((self.im_stack.shape[-1] - proj_ref))
+        proj_nums = range(proj_ref, self.im_stack.shape[-1])
+        for idx, i in enumerate(proj_nums):
             current = downscale_local_mean(self.im_stack[:, :, i], (3, 3))
             tmp = current - ref
-            diff[i] = tmp.std()
+            diff[idx] = tmp.std()
         minimas = argrelmin(np.array(diff), order = order)
+        print(minimas)
+        self.p0 = proj_ref
         self.num_images = minimas[0][0] + 1
         self.angles = np.linspace(0, 360, self.num_images, dtype = int)
         
         if plot:
-            plt.plot(diff)
-            plt.plot(minimas[0], np.array(diff)[minimas], 'r*')
-            plt.plot([minimas[0][0], minimas[0][0]], [0, np.max(diff)], 'r--')
+            plt.plot(proj_nums, diff)
+            plt.plot(minimas[0] + proj_ref, np.array(diff)[minimas], 'r*')
+            plt.plot([minimas[0][0] + proj_ref, minimas[0][0] + proj_ref], [0, np.max(diff)], 'r--')
             plt.xlabel('Image number')
             plt.ylabel('Thresholded Pixels Relative to Image 1')
-            plt.text(minimas[0][0], np.max(diff), r'$360^{\circ}$', 
+            plt.text(minimas[0][0] + proj_ref, np.max(diff), r'$360^{\circ}$', 
                      horizontalalignment='center', verticalalignment='bottom')
                      
-        print('%i images in a $360^{\circ}$ rotation: \n If this is incorrect '
+        print('\n%i images in a 360 rotation. \n\n If this is incorrect '
               'either rerun with a different value for order or use the manual'
               ' method.' % self.num_images)
         
@@ -124,7 +139,7 @@ class TomoScan(object):
     def reconstruct(self, downsample = (4, 4, 1), pre_filter = True, 
                     kernel = 9, save = True):
         
-        images = self.im_stack[:, :, :self.num_images]
+        images = self.im_stack[:, :, self.p0:self.num_images + self.p0]
         images = downscale_local_mean(images, downsample)
         
         if pre_filter != False:
