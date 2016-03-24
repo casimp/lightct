@@ -4,7 +4,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from mayavi import mlab
+#from mayavi import mlab
 import sys
 import os
 import numpy as np
@@ -16,7 +16,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 import time
-import cv2
+#import cv2
 
 
 class TomoScan(object):
@@ -37,6 +37,9 @@ class TomoScan(object):
             self.im_stack[:, :, i] = color.rgb2hsv(im)[:, :, 2]
             time.sleep(wait)
         del(camera)
+        self.proj_width = self.im_stack.shape[0]
+        self.proj_height = self.im_stack.shape[1]
+        
 
             
     def plot_histogram(self, proj = 0):
@@ -86,7 +89,38 @@ class TomoScan(object):
               'either rerun with a different value for order or use the manual'
               ' method.' % self.num_images)
         
+    def auto_centre(self, window = 200, cropped = False):
+        if cropped:
+            ref = self.cropped[:, window:-window, self.p0]
+            im_180 = self.cropped[:, :, int(self.num_images / 2) + self.p0]
+        else:
+            ref = self.im_stack[:, window:-window, self.p0]
+            im_180 = self.im_stack[:, :, int(self.num_images / 2) + self.p0]
+        flipped = np.fliplr(im_180)
+        win_range = range(-window, window)
+        diff = np.nan * np.zeros(len(win_range))
         
+        for idx, i in enumerate(win_range):
+            
+            cropped = flipped[:, window + i: -window + i]
+            tmp = cropped - ref
+            diff[idx] = tmp.std()
+        
+        
+        minima = np.argmin(diff)
+        self.cor = win_range[minima]
+        plt.plot(win_range, diff)
+        plt.figure()
+        plt.imshow(flipped[:,  window + win_range[minima]: -window + win_range[minima]] - ref)
+        
+        
+    def crop_to_centre(self):
+        if self.cor < 0:
+            self.cropped = self.im_stack[:, self.cor:, :]
+        else:
+            self.cropped = self.im_stack[:, :-self.cor, :]       
+        
+    
     def manual_set_angles(self, interact = True, proj_ref = 5, 
                           num_images = None, ang_range = None):
         """
@@ -153,7 +187,11 @@ class TomoScan(object):
     def reconstruct(self, downsample = (4, 4, 1), pre_filter = True, 
                     kernel = 9, save = True):
         
-        images = self.im_stack[:, :, self.p0:self.num_images + self.p0]
+        if self.cor <= 0:
+            images = self.im_stack[:, self.cor:, self.p0:self.num_images + self.p0]
+        else:
+            images= self.im_stack[:, :-self.cor, self.p0:self.num_images + self.p0]    
+            
         images = downscale_local_mean(images, downsample)
         
         if pre_filter != False:
@@ -266,3 +304,4 @@ class LoadScan(TomoScan):
             sys.stdout.flush()
             f = os.path.join(self.folder, fname)
             self.im_stack[:, :, idx] = sc.misc.imread(f)
+        self.cor = 0
