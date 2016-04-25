@@ -13,20 +13,21 @@ from skimage import filters, measure, color
 from skimage.transform import iradon, downscale_local_mean
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import patches
 from matplotlib.widgets import Slider, Button
 import time
 import cv2
 try:
     from mayavi import mlab
 except ImportError:
-    warning = "Unable to import mayavi. vizualize method will not work."
+    warning = "Warning: Unable to import mayavi. vizualize method will not work."
     print(warning)
 
 
 
 class TomoScan(object):
     
-    def __init__(self, proj=100, folder='', camera_port=0, wait=0, save=False):
+    def __init__(self, proj=200, folder='', camera_port=0, wait=0, save=False):
         """
         Note that for the subsequent functionality to work, the number of 
         projections must be great enough to ensure that a rotational 
@@ -42,10 +43,13 @@ class TomoScan(object):
             error = (r'Camera returning None. Check camera settings (port) and'
                      r' ensure camera is not being run by other software.')
             raise TypeError(error)
+#        dims = (100, 100, proj)
         self.im_stack = np.zeros(dims)
         
         for i in range(proj):
             retval, im = camera.read()
+#            im = np.random.rand(dims[0], dims[1])
+            #self.im_stack[:, :, i] = im
             self.im_stack[:, :, i] = color.rgb2hsv(im)[:, :, 2]
             sys.stdout.write("\rProgress: [{0:20s}] {1:.0f}%".format('#' * 
             int(20*(i + 1) / (proj)), 100*((i + 1)/(proj))))
@@ -55,11 +59,13 @@ class TomoScan(object):
         self.proj_width = self.im_stack.shape[0]
         self.proj_height = self.im_stack.shape[1]
         self.cor_offset = 0
+               
         if save:
-            save_folder = os.path.join(folder, 'projections/')    
+            save_folder = os.path.join(self.folder, 'projections')
+            if not os.path.exists(save_folder):
+                os.makedirs(save_folder)
             for idx in range(self.im_stack.shape[-1]):
-                fpath = os.path.join(save_folder, '%04d.tif' %  idx)
-                cv2.imwrite(fpath, self.im_stack[:, :, idx])
+                sc.misc.imsave(save_folder + '/%04d.tif' % idx, self.im_stack[:, :, idx])
             
     def plot_histogram(self, proj = 0):
         """
@@ -138,12 +144,51 @@ class TomoScan(object):
             diff[idx] = tmp.std()
         
         
+        height = self.im_stack.shape[0]
+        width = self.im_stack.shape[1]
+        
         minima = np.argmin(diff)
         self.cor_offset = win_range[minima]
         plt.plot(win_range, diff)
-        plt.figure()
-        plt.imshow(flipped[:,  half_win + win_range[minima]:-half_win + win_range[minima]] - ref)
-        plt.imshow(flipped[:,  half_win + win_range[minima]:-half_win + win_range[minima]] - ref)
+        #plt.plot([self.cor_offset, self.cor_offset], [np.min(diff), np.min(diff), '--'])
+        plt.plot(self.cor_offset, np.min(diff), '*')
+        plt.ylabel('Standard deviation (original v 180deg flipped)')
+        plt.xlabel('Cropped pixels')
+        
+        fig, ax_array = plt.subplots(1, 2, figsize=(10, 6))
+        image = np.copy(self.im_stack[:, :, self.p0])
+        if self.cor_offset <= 0:
+            poly_pnts = [[width + self.cor_offset, 0], [width, 0], [width, height], [width + self.cor_offset, height]]  
+        else:
+            poly_pnts = [[0, 0], [self.cor_offset, 0], [self.cor_offset, height], [0, height]]  
+        ax_array[0].imshow(image)
+        centre = self.im_stack.shape[1] / 2 - self.cor_offset / 2
+        ax_array[0].plot([centre, centre], [0, self.im_stack.shape[0]], 'k-', linewidth = 2, label = 'New COR')
+        ax_array[0].plot([self.im_stack.shape[1] / 2, self.im_stack.shape[1] / 2], [0, self.im_stack.shape[0]], 'r-', linewidth = 2, label = 'Old COR')
+        ax_array[0].legend()
+        ax_array[0].set_xlim([0, image.shape[1]])
+        ax_array[0].set_ylim([image.shape[0], 0])
+
+        
+        if self.cor_offset <= 0:
+            image = np.copy(self.im_stack[:, -self.cor_offset:, self.p0])
+        else:
+            image = np.copy(self.im_stack[:, :-self.cor_offset, self.p0])
+            
+        #plt.figure()
+        ax_array[1].imshow(image)
+        ax_array[1].plot([image.shape[1]/2, image.shape[1]/2], [0, self.im_stack.shape[0]], 'k-', linewidth = 2, label = 'New COR')
+        ax_array[1].legend()
+        
+        ax_array[1].set_xlim([0, image.shape[1]])
+        ax_array[1].set_ylim([image.shape[0], 0])
+        
+        ax_array[0].add_patch(patches.Polygon(poly_pnts, closed=True,
+                      fill=False, hatch='///', color = 'k'))
+        ax_array[0].set_title('Uncropped')
+        ax_array[1].set_title('Cropped and centred')
+        #ax_array[1].set_yticklabels([])
+
         
         
     def crop_to_centre(self):
@@ -151,9 +196,9 @@ class TomoScan(object):
         Temporary method for re-cropping of data after finding the cor_offset.
         """
         if self.cor_offset < 0:
-            self.cropped = self.im_stack[:, :self.cor_offset, :]
+            self.cropped = self.im_stack[:, -self.cor_offset:, :]
         else:
-            self.cropped = self.im_stack[:, self.cor_offset:, :]       
+            self.cropped = self.im_stack[:, :-self.cor_offset, :]       
         
     
     def manual_set_angles(self, interact = True, proj_ref = 5, 
@@ -218,16 +263,16 @@ class TomoScan(object):
             error = ('Images must cover a rotational range of 180 or 360 deg')
             assert (ang_range == 180) or (ang_range == 360), error
             self.angles = np.linspace(0, ang_range, num_images)
-            self.imstack = self.imstack[:, :, :num_images]
+            self.im_stack = self.im_stack[:, :, :num_images]
         
         
     def reconstruct(self, downsample = (4, 4, 1), pre_filter = True, 
                     kernel = 9, save = True):
         
         if self.cor_offset <= 0:
-            images = self.im_stack[:, :self.cor_offset, self.p0:self.num_images + self.p0]
+            images = self.im_stack[:, -self.cor_offset:, self.p0:self.num_images + self.p0]
         else:
-            images= self.im_stack[:, self.cor_offset:, self.p0:self.num_images + self.p0]    
+            images= self.im_stack[:, :-self.cor_offset, self.p0:self.num_images + self.p0]    
             
         images = downscale_local_mean(images, downsample)
         
