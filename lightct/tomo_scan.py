@@ -43,13 +43,10 @@ class TomoScan(object):
             error = (r'Camera returning None. Check camera settings (port) and'
                      r' ensure camera is not being run by other software.')
             raise TypeError(error)
-#        dims = (100, 100, proj)
         self.im_stack = np.zeros(dims)
         
         for i in range(proj):
             retval, im = camera.read()
-#            im = np.random.rand(dims[0], dims[1])
-            #self.im_stack[:, :, i] = im
             self.im_stack[:, :, i] = color.rgb2hsv(im)[:, :, 2]
             sys.stdout.write("\rProgress: [{0:20s}] {1:.0f}%".format('#' * 
             int(20*(i + 1) / (proj)), 100*((i + 1)/(proj))))
@@ -65,7 +62,8 @@ class TomoScan(object):
             if not os.path.exists(save_folder):
                 os.makedirs(save_folder)
             for idx in range(self.im_stack.shape[-1]):
-                sc.misc.imsave(save_folder + '/%04d.tif' % idx, self.im_stack[:, :, idx])
+                fpath = os.path.join(save_folder, '%04d.tif' % idx)
+                sc.misc.imsave(fpath, self.im_stack[:, :, idx])
             
     def plot_histogram(self, proj = 0):
         """
@@ -106,6 +104,7 @@ class TomoScan(object):
         self.angles = np.linspace(0, 360, self.num_images, dtype = int)
         
         if plot:
+            plt.figure()
             plt.plot(proj_nums, diff)
             plt.plot(minimas[0] + proj_ref, np.array(diff)[minimas], 'r*')
             plt.plot([minimas[0][0] + proj_ref, minimas[0][0] + proj_ref], [0, np.max(diff)], 'r--')
@@ -293,7 +292,8 @@ class TomoScan(object):
                 save_folder = os.path.join(self.folder, 'reconstruction')
                 if not os.path.exists(save_folder):
                     os.makedirs(save_folder)
-                sc.misc.imsave(save_folder + '/%04d.tif' % j, imagetmp)
+                fpath = os.path.join(save_folder, '%04d.tif' % j)
+                sc.misc.imsave(fpath, imagetmp)
 
     def recon_threshold(self, image = 0):
         backend = matplotlib.get_backend()
