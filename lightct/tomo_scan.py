@@ -21,36 +21,42 @@ from lightct.plot_funcs import recentre_plot, SetAngleInteract
 
 class TomoScan(object):
     
-    def __init__(self, num_projections, save_folder, camera_port=0,
+    def __init__(self, num_proj, folder, camera_port=0,
                  wait=0, save=True):
         """
-        Note that for the subsequent functionality to work, the number of 
-        projections must be great enough to ensure that a rotational 
+        Acquires specified number of projections for analysis and
+        reconstruction. The specified number must ensure that a rotational
         range > 360 degrees is captured.
+
+        # num_proj:  Number of projections to acquire (must cover > 360deg)
+        # folder:    Path to folder for data storage. Projections and
+                     reconstructed slices will be saved here.
         """
-        self.folder = save_folder
+        self.folder = folder
         self.p0 = 0
         self.cor_offset = 0
-        self.num_images = 0
+        self.num_images = None
         self.angles = None
         self.recon_data = None
 
         camera = cv2.VideoCapture(camera_port)
-        retval, im = camera.read()
+        _, im = camera.read()
         try:
-            dims = im[:, :, 2].shape + (num_projections, )
+            dims = im[:, :, 2].shape + (num_proj, )
         except TypeError:
-            error = ("Camera returning None. Check camera settings (port) and"
-                     " ensure camera is not being run by other software.")
+            error = ('Camera returning None. Check camera settings (port) and'
+                     ' ensure camera is not being run by other software.')
             raise TypeError(error)
         self.im_stack = np.zeros(dims)
 
-        for i in range(num_projections):
-            retval, im = camera.read()
+        print('\n\n')
+        # Acquires defined number of images as quickly as possible (saves hsv)
+        for i in range(num_proj):
+            _, im = camera.read()
             self.im_stack[:, :, i] = color.rgb2hsv(im)[:, :, 2]
-            sys.stdout.write("\rProgress: [{0:20s}] {1:.0f}%".format('#' * 
-                             int(20*(i + 1) / num_projections),
-                             100*((i + 1)/num_projections)))
+            sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
+                             int(20*(i + 1) / num_proj),
+                             100*((i + 1)/num_proj)))
             sys.stdout.flush()
             time.sleep(wait)
         del camera
@@ -63,16 +69,16 @@ class TomoScan(object):
             if not os.path.exists(save_folder):
                 os.makedirs(save_folder)
             for idx in range(self.im_stack.shape[-1]):
-                fpath = os.path.join(save_folder, '%04d.tif' % idx)
-                imsave(fpath, self.im_stack[:, :, idx])
+                f_path = os.path.join(save_folder, '%04d.tif' % idx)
+                imsave(f_path, self.im_stack[:, :, idx])
 
-    def plot_histogram(self, projection=5):
+    def plot_histogram(self, proj=5):
         """
         Plots histogram of pixel intensity for specified projection.
         
-        # projection: Projection number (int)
+        # proj:       Number of projection to display/assess (int)
         """
-        histogram = np.histogram(self.im_stack[:, :, projection], 255)
+        histogram = np.histogram(self.im_stack[:, :, proj], 255)
         plt.plot(histogram[0])
         plt.show()
         
@@ -84,7 +90,7 @@ class TomoScan(object):
         
         # order:      Window in which to search for minimas in the
                       difference calculations - should be approx equal to
-                      (number of projections in 360) / 2
+                      *half* the number of projections in 360
         # p0:         Projection to use as initial or reference projection.
                       Recommended to be greater than 1 (due to acquisition
                       spacing issues in initial projections)
@@ -94,12 +100,15 @@ class TomoScan(object):
         ref = downscale_local_mean(self.im_stack[:, :, p0], (3, 3))
         diff = np.nan * np.ones((self.im_stack.shape[-1] - p0))
         proj_nums = range(p0, self.im_stack.shape[-1])
+
+        # Iterates across projections and calc/stores stdev from image_1
         for idx, i in enumerate(proj_nums):
             current = downscale_local_mean(self.im_stack[:, :, i], (3, 3))
             tmp = current - ref
             diff[idx] = tmp.std()
+
+        # Searches for local minimas - order is essentially window width / 2
         minimas = argrelmin(np.array(diff), order=order)
-        print(minimas)
         self.num_images = minimas[0][0] + 1
         self.angles = np.linspace(0, 360, self.num_images, dtype=int)
         
@@ -127,7 +136,8 @@ class TomoScan(object):
         """
         half_win = window // 2
         win_range = range(-half_win, half_win)
-        
+
+        # Compare ref image with flipped 180deg counterpart
         ref = self.im_stack[:, half_win:-half_win, self.p0]
         im_180 = self.im_stack[:, :, int(self.num_images / 2) + self.p0]
         flipped = np.fliplr(im_180)
@@ -151,8 +161,8 @@ class TomoScan(object):
 
         recentre_plot(np.copy(self.im_stack[:, :, self.p0]), self.cor_offset)
         
-    def manual_set_angles(self, interact=True, p0=5,
-                          num_images=None, ang_range=None):
+    def manual_set_angles(self, interact=True, p0=5, num_images=None,
+                          ang_range=None):
         """
         Manually define the number of images in 360 degrees. Defaults to 
         interactive mode in which images can be compared against initial, 
@@ -204,23 +214,34 @@ class TomoScan(object):
                 images[:, :, i] = medfilt(images[:, :, i], kernel_size=kernel)
 
         for j in range(self.height):
-            sinotmp = np.squeeze(images[j, :, :])
-            imagetmp = iradon(sinotmp, theta=self.angles,
-                              filter=None, circle=True)
+            sino_tmp = np.squeeze(images[j, :, :])
+            image_tmp = iradon(sino_tmp, theta=self.angles,
+                               filter=None, circle=True)
 
-            self.recon_data[:, :, j] = imagetmp
+            self.recon_data[:, :, j] = image_tmp
             save_folder = os.path.join(self.folder, 'reconstruction')
             if not os.path.exists(save_folder):
                 os.makedirs(save_folder)
-            imsave(os.path.join(save_folder, '%04d.tif' % j), imagetmp)
+            imsave(os.path.join(save_folder, '%04d.tif' % j), image_tmp)
 
         
 class LoadProjections(TomoScan):
 
-    def __init__(self, load_folder):
+    def __init__(self, folder):
+        """
+        Load a previously acquired series of projections for analysis and
+        reconstruction.
 
-        self.folder = load_folder
-        files = [f for f in os.listdir(load_folder) if f[-4:] == '.tif']
+        # folder:    Path to folder where projections are stored. Reconstructed
+                     slices will also be saved here.
+        """
+        self.folder = folder
+        self.p0 = 0
+        self.cor_offset = 0
+        self.num_images = None
+        self.angles = None
+
+        files = [f for f in os.listdir(folder) if f[-4:] == '.tif']
         im_shape = imread(os.path.join(self.folder, files[0])).shape
         self.im_stack = np.zeros(im_shape + (len(files), ))
         for idx, fname in enumerate(files):
@@ -231,9 +252,5 @@ class LoadProjections(TomoScan):
             f = os.path.join(self.folder, fname)
             self.im_stack[:, :, idx] = imread(f)
 
-        self.p0 = 0
-        self.cor_offset = 0
-        self.num_images = 0
-        self.angles = None
         self.height = self.im_stack.shape[0]
         self.width = self.im_stack.shape[1]
