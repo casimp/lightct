@@ -19,12 +19,6 @@ from scipy.signal import medfilt, argrelmin
 from skimage import filters, measure, color
 from skimage.transform import iradon, downscale_local_mean
 
-try:
-    from mayavi import mlab
-except ImportError:
-    warning = "Warning: Unable to import mayavi. vizualize method won't work."
-    print(warning)
-
 
 class TomoScan(object):
     
@@ -296,73 +290,6 @@ class TomoScan(object):
                     os.makedirs(save_folder)
                 fpath = os.path.join(save_folder, '%04d.tif' % j)
                 imsave(fpath, imagetmp)
-
-    def recon_threshold(self, image=0):
-        backend = matplotlib.get_backend()
-        err = ("Matplotlib running inline. Plot interaction not possible."
-               "\nTry running %matplotlib in the ipython console (and "
-               "%matplotlib inline to return to default behaviour). In "
-               "standard console use matplotlib.use('TkAgg') to interact.")
-
-        assert backend != 'module://ipykernel.pylab.backend_inline', err
-
-        fig, ax_array = plt.subplots(1, 2, figsize=(12, 5))
-
-        bins = np.max(self.recon_data[:, :, image]).astype(int)
-
-        ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])
-        ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
-
-        ax_array[0].imshow(self.recon_data[:, :, image])
-        ax_array[1].imshow(self.recon_data[:, :, image] > 0)
-        ax_array[1].axis('off')
-        ax_array[0].axis('off')
-        fig.tight_layout()
-        fig.subplots_adjust(bottom=0.2)
-        window_slider = Slider(ax_slider, 'Thresh', 0, bins, valinit=0)
-        store_button = Button(ax_button, r'Save')
-
-        def slider_update(val):
-            ax_array[1].imshow(self.recon_data[:, :, image] >
-                               window_slider.val)
-            window_slider.valtext.set_text('%i' % window_slider.val)
-            fig.canvas.draw_idle()
-
-        window_slider.on_changed(slider_update)
-
-        def store_data(label):
-
-            self.thresh = int(window_slider.val)
-            plt.close()
-
-        store_button.on_clicked(store_data)
-        return window_slider, store_button
-
-    def vizualize(self, crop=60, downsample=(2, 2, 2), kernel=9, thresh=None):
-
-        data = self.recon_data[crop: -crop, crop: -crop, :]
-        data = downscale_local_mean(data, downsample)
-
-        for i in range(data.shape[2]):
-            data[:, :, i] = medfilt(data[:, :, i], kernel_size=kernel)
-
-        if thresh is None:
-            try:
-                thresh = self.thresh
-            except AttributeError:
-                error = ('Either manually define thresh variable or run '
-                         'recon_threshold method.')
-                raise AttributeError(error)
-        elif thresh == 'otsu':
-            thresh = filters.threshold_otsu(data)
-
-        datathres = data >= thresh
-
-        verts, faces = measure.marching_cubes(datathres, 0)
-        mlab.triangular_mesh([vert[0] for vert in verts],
-                             [vert[1] for vert in verts],
-                             [vert[2] for vert in verts], faces)
-        mlab.show()
 
         
 class LoadScan(TomoScan):
