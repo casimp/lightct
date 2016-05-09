@@ -22,7 +22,7 @@ The package also leverages opencv for the acquisition of images:
 Installation
 ------------
 
-Installing lightct is easily done using pip. Assuming it is installed, just run the following from the command-line:
+Installing lightct is easily done using pip. Assuming you have pip installed, just run the following from the command-line:
 
 ```
 pip install lightct

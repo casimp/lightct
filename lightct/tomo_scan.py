@@ -9,15 +9,14 @@ import time
 import os
 
 import cv2
-import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib import patches
-from matplotlib.widgets import Slider, Button
 import numpy as np
 from scipy.misc import imread, imsave
 from scipy.signal import medfilt, argrelmin
 from skimage import color
 from skimage.transform import iradon, downscale_local_mean
+
+from lightct.plot_funcs import recentre_plot, SetAngleInteract
 
 
 class TomoScan(object):
@@ -83,12 +82,12 @@ class TomoScan(object):
         of 360 degrees). Alignment based on difference calculation between 
         reference projection each subsequent projections. 
         
+        # order:      Window in which to search for minimas in the
+                      difference calculations - should be approx equal to
+                      (number of projections in 360) / 2
         # p0:         Projection to use as initial or reference projection.
                       Recommended to be greater than 1 (due to acquisition
                       spacing issues in initial projections)
-        # order:      Window in which to search for minimas in the
-                      difference calculations - should be approx equal to 
-                      (number of projections in 360) / 2
         # plot:       Plot the difference results
         """
         self.p0 = p0
@@ -134,8 +133,9 @@ class TomoScan(object):
         flipped = np.fliplr(im_180)
         
         diff = np.nan * np.zeros(len(win_range))
-        
-        for idx, i in enumerate(win_range):
+
+        # Flip win_range as we are working on flipped data
+        for idx, i in enumerate(win_range[::-1]):
             
             cropped = flipped[:, half_win + i: -half_win + i]
             tmp = cropped - ref
@@ -147,47 +147,10 @@ class TomoScan(object):
         plt.plot(win_range, diff)
         plt.plot(self.cor_offset, np.min(diff), '*')
         plt.ylabel('Standard deviation (original v 180deg flipped)')
-        plt.xlabel('Cropped pixels')
-        
-        fig, ax_array = plt.subplots(1, 2, figsize=(10, 6))
-        image = np.copy(self.im_stack[:, :, self.p0])
-        if self.cor_offset <= 0:
-            poly_pnts = [[self.width + self.cor_offset, 0], [self.width, 0],
-                         [self.width, self.height],
-                         [self.width + self.cor_offset, self.height]]
-        else:
-            poly_pnts = [[0, 0], [self.cor_offset, 0],
-                         [self.cor_offset, self.height], [0, self.height]]
-        ax_array[0].imshow(image)
-        centre = self.width / 2 - self.cor_offset / 2
-        ax_array[0].plot([centre, centre], [0, self.height], 'k-',
-                         linewidth=2, label='New COR')
-        ax_array[0].plot([self.width / 2, self.width / 2],
-                         [0, self.height], 'r-', linewidth=2, label='Old COR')
-        ax_array[0].legend()
-        ax_array[0].set_xlim([0, image.shape[1]])
-        ax_array[0].set_ylim([image.shape[0], 0])
+        plt.xlabel('2 * Centre correction (pixels)')
 
-        if self.cor_offset <= 0:
-            image = np.copy(self.im_stack[:, -self.cor_offset:, self.p0])
-        else:
-            image = np.copy(self.im_stack[:, :-self.cor_offset, self.p0])
-            
-        ax_array[1].imshow(image)
-        ax_array[1].plot([image.shape[1]/2, image.shape[1]/2],
-                         [0, self.height], 'k-', linewidth=2, label='New COR')
-        ax_array[1].legend()
+        recentre_plot(np.copy(self.im_stack[:, :, self.p0]), self.cor_offset)
         
-        ax_array[1].set_xlim([0, image.shape[1]])
-        ax_array[1].set_ylim([image.shape[0], 0])
-        
-        ax_array[0].add_patch(patches.Polygon(poly_pnts, closed=True,
-                              fill=False, hatch='///', color='k'))
-        ax_array[0].set_title('Uncropped')
-        ax_array[1].set_title('Cropped and centred')
-
-        plt.show()
-
     def manual_set_angles(self, interact=True, p0=5,
                           num_images=None, ang_range=None):
         """
@@ -207,61 +170,34 @@ class TomoScan(object):
         self.p0 = p0
 
         if interact:
-            backend = matplotlib.get_backend()
-            err = ("Matplotlib running inline. Plot interaction not possible."
-                   "\nTry running %matplotlib in the ipython console (and "
-                   "%matplotlib inline to return to default behaviour). In "
-                   "standard console use matplotlib.use('TkAgg') to interact.")
-                     
-            assert backend != 'module://ipykernel.pylab.backend_inline', err
-            fig, ax_array = plt.subplots(1, 2, figsize=(10, 5))
-            
-            ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])  
-            ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
-            
-            ax_array[0].imshow(self.im_stack[:, :, p0])
-            ax_array[1].imshow(self.im_stack[:, :, p0])
-            ax_array[0].axis('off')
-            ax_array[1].axis('off')
-            fig.tight_layout()
-            fig.subplots_adjust(bottom=0.2)
-            nfiles = self.im_stack.shape[-1] + 1
-            window_slider = Slider(ax_slider, 'Image', p0, nfiles, valinit=0)
-            store_button = Button(ax_button, r'Save - 360')
-            
-            def slider_update(val):
-                ax_array[1].imshow(self.im_stack[:, :, int(window_slider.val)])
-                window_slider.valtext.set_text('%i' % window_slider.val)
-                fig.canvas.draw_idle()
-                
-            window_slider.on_changed(slider_update)
-            
-            def store_data(label):
-                # Check this is correct - proj_ref!!!
-                self.num_images = int(window_slider.val) - p0 + 1
-                self.angles = np.linspace(0, 360, self.num_images)
-                plt.close()
-                
-            store_button.on_clicked(store_data)
-            plt.show()
-            return window_slider, store_button
+            interact = SetAngleInteract(self.im_stack, self.p0)
+            interact.interact()
+            self.angles = interact.angles
+            self.num_images = interact.num_images
 
         else:
             error = 'Images must cover a rotational range of 180 or 360 deg'
             assert (ang_range == 180) or (ang_range == 360), error
             self.angles = np.linspace(0, ang_range, num_images)
-            self.im_stack = self.im_stack[:, :, :num_images]
+            self.num_images = num_images
         
-    def reconstruct(self, downsample=(4, 4, 1), pre_filter=True, kernel=9):
-        
-        if self.cor_offset <= 0:
-            images = self.im_stack[:, -self.cor_offset:,
-                                   self.p0:self.num_images + self.p0]
+    def reconstruct(self, downsample=(4, 4), pre_filter=True, kernel=9):
+        """
+        Reconstruct the data using a radon transform. Reconstructed slices
+        saved in folder specified upon class creation.
+
+        # downsample: Downsample (local mean) data before reconstructing.
+                      Specify mean kernel size (height, width).
+        # pre_filter: If True apply median filter to data before reconstructing
+        # kernel:     Kernel size to use for median filter
+        """
+        if self.cor_offset >= 0:
+            images = self.im_stack[:, self.cor_offset:]
         else:
-            images = self.im_stack[:, :-self.cor_offset,
-                                   self.p0:self.num_images + self.p0]
-            
-        images = downscale_local_mean(images, downsample)
+            images = self.im_stack[:, :self.cor_offset]
+        images = images[:, :, self.num_images + self.p0]
+
+        images = downscale_local_mean(images, downsample + (1, ))
         
         if pre_filter is not False:
             for i in range(images.shape[-1]): 
