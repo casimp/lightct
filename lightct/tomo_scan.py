@@ -16,7 +16,7 @@ from matplotlib.widgets import Slider, Button
 import numpy as np
 from scipy.misc import imread, imsave
 from scipy.signal import medfilt, argrelmin
-from skimage import filters, measure, color
+from skimage import color
 from skimage.transform import iradon, downscale_local_mean
 
 
@@ -34,6 +34,7 @@ class TomoScan(object):
         self.cor_offset = 0
         self.num_images = 0
         self.angles = None
+        self.recon_data = None
 
         camera = cv2.VideoCapture(camera_port)
         retval, im = camera.read()
@@ -57,10 +58,7 @@ class TomoScan(object):
 
         self.height = self.im_stack.shape[0]
         self.width = self.im_stack.shape[1]
-        self.cor_offset = 0
-        self.cropped = self.im_stack
-        self.recon_data = None
-               
+
         if save:
             save_folder = os.path.join(self.folder, 'projections')
             if not os.path.exists(save_folder):
@@ -78,7 +76,7 @@ class TomoScan(object):
         histogram = np.histogram(self.im_stack[:, :, proj], 255)
         plt.plot(histogram[0])
         
-    def auto_set_angles(self, proj_ref=5, order=25, plot=True):
+    def auto_set_angles(self, order, proj_ref=5, plot=True):
         """
         Attempts to automatically locate image at 360 degrees (and multiples
         of 360 degrees). Alignment based on difference calculation between 
@@ -120,7 +118,7 @@ class TomoScan(object):
               'either rerun with a different value for order or use the manual'
               ' method.' % self.num_images)
         
-    def auto_centre(self, window=400, cropped=False):
+    def auto_centre(self, window=400):
         """
         Automatic method for finding the centre of rotation.
         
@@ -129,12 +127,8 @@ class TomoScan(object):
         half_win = window // 2
         win_range = range(-half_win, half_win)
         
-        if cropped:
-            ref = self.cropped[:, half_win:-half_win, self.p0]
-            im_180 = self.cropped[:, :, int(self.num_images / 2) + self.p0]
-        else:
-            ref = self.im_stack[:, half_win:-half_win, self.p0]
-            im_180 = self.im_stack[:, :, int(self.num_images / 2) + self.p0]
+        ref = self.im_stack[:, half_win:-half_win, self.p0]
+        im_180 = self.im_stack[:, :, int(self.num_images / 2) + self.p0]
         flipped = np.fliplr(im_180)
         
         diff = np.nan * np.zeros(len(win_range))
@@ -190,15 +184,6 @@ class TomoScan(object):
         ax_array[0].set_title('Uncropped')
         ax_array[1].set_title('Cropped and centred')
 
-    def crop_to_centre(self):
-        """
-        Temporary method for re-cropping of data after finding the cor_offset.
-        """
-        if self.cor_offset < 0:
-            self.cropped = self.im_stack[:, -self.cor_offset:, :]
-        else:
-            self.cropped = self.im_stack[:, :-self.cor_offset, :]       
-        
     def manual_set_angles(self, interact=True, proj_ref=5,
                           num_images=None, ang_range=None):
         """
@@ -292,11 +277,11 @@ class TomoScan(object):
                 imsave(fpath, imagetmp)
 
         
-class LoadScan(TomoScan):
+class LoadProjections(TomoScan):
     
-    def __init__(self, folder):
-        self.folder = folder
-        files = [f for f in os.listdir(folder) if f[-4:] == '.tif']
+    def __init__(self, load_folder):
+        self.folder = load_folder
+        files = [f for f in os.listdir(load_folder) if f[-4:] == '.tif']
         im_shape = imread(os.path.join(self.folder, files[0])).shape
         self.im_stack = np.zeros(im_shape + (len(files), ))
         for idx, fname in enumerate(files):
@@ -306,4 +291,10 @@ class LoadScan(TomoScan):
             sys.stdout.flush()
             f = os.path.join(self.folder, fname)
             self.im_stack[:, :, idx] = imread(f)
+
+        self.p0 = 0
         self.cor_offset = 0
+        self.num_images = 0
+        self.angles = None
+        self.height = self.im_stack.shape[0]
+        self.width = self.im_stack.shape[1]
