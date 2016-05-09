@@ -23,7 +23,7 @@ from skimage.transform import iradon, downscale_local_mean
 class TomoScan(object):
     
     def __init__(self, num_projections, save_folder, camera_port=0,
-                 wait=0, save=False):
+                 wait=0, save=True):
         """
         Note that for the subsequent functionality to work, the number of 
         projections must be great enough to ensure that a rotational 
@@ -41,8 +41,8 @@ class TomoScan(object):
         try:
             dims = im[:, :, 2].shape + (num_projections, )
         except TypeError:
-            error = (r'Camera returning None. Check camera settings (port) and'
-                     r' ensure camera is not being run by other software.')
+            error = ("Camera returning None. Check camera settings (port) and"
+                     " ensure camera is not being run by other software.")
             raise TypeError(error)
         self.im_stack = np.zeros(dims)
 
@@ -67,22 +67,22 @@ class TomoScan(object):
                 fpath = os.path.join(save_folder, '%04d.tif' % idx)
                 imsave(fpath, self.im_stack[:, :, idx])
 
-    def plot_histogram(self, proj=5):
+    def plot_histogram(self, projection=5):
         """
         Plots histogram of pixel intensity for specified projection.
         
-        # proj:       Projection number (int)
+        # projection: Projection number (int)
         """
-        histogram = np.histogram(self.im_stack[:, :, proj], 255)
+        histogram = np.histogram(self.im_stack[:, :, projection], 255)
         plt.plot(histogram[0])
         
-    def auto_set_angles(self, order, proj_ref=5, plot=True):
+    def auto_set_angles(self, order, p0=5, plot=True):
         """
         Attempts to automatically locate image at 360 degrees (and multiples
         of 360 degrees). Alignment based on difference calculation between 
         reference projection each subsequent projections. 
         
-        # proj_ref:   Projection to use as initial or reference projection.
+        # p0:         Projection to use as initial or reference projection.
                       Recommended to be greater than 1 (due to acquisition
                       spacing issues in initial projections)
         # order:      Window in which to search for minimas in the
@@ -90,28 +90,28 @@ class TomoScan(object):
                       (number of projections in 360) / 2
         # plot:       Plot the difference results
         """
-        ref = downscale_local_mean(self.im_stack[:, :, proj_ref], (3, 3))
-        diff = np.nan * np.ones((self.im_stack.shape[-1] - proj_ref))
-        proj_nums = range(proj_ref, self.im_stack.shape[-1])
+        self.p0 = p0
+        ref = downscale_local_mean(self.im_stack[:, :, p0], (3, 3))
+        diff = np.nan * np.ones((self.im_stack.shape[-1] - p0))
+        proj_nums = range(p0, self.im_stack.shape[-1])
         for idx, i in enumerate(proj_nums):
             current = downscale_local_mean(self.im_stack[:, :, i], (3, 3))
             tmp = current - ref
             diff[idx] = tmp.std()
         minimas = argrelmin(np.array(diff), order=order)
         print(minimas)
-        self.p0 = proj_ref
         self.num_images = minimas[0][0] + 1
         self.angles = np.linspace(0, 360, self.num_images, dtype=int)
         
         if plot:
             plt.figure()
             plt.plot(proj_nums, diff)
-            plt.plot(minimas[0] + proj_ref, np.array(diff)[minimas], 'r*')
-            plt.plot([minimas[0][0] + proj_ref, minimas[0][0] + proj_ref],
+            plt.plot(minimas[0] + p0, np.array(diff)[minimas], 'r*')
+            plt.plot([minimas[0][0] + p0, minimas[0][0] + p0],
                      [0, np.max(diff)], 'r--')
             plt.xlabel('Image number')
             plt.ylabel('Thresholded Pixels Relative to Image 1')
-            plt.text(minimas[0][0] + proj_ref, np.max(diff), r'$360^{\circ}$', 
+            plt.text(minimas[0][0] + p0, np.max(diff), r'$360^{\circ}$',
                      horizontalalignment='center', verticalalignment='bottom')
                      
         print('\n%i images in a 360 rotation. \n\n If this is incorrect '
@@ -184,7 +184,7 @@ class TomoScan(object):
         ax_array[0].set_title('Uncropped')
         ax_array[1].set_title('Cropped and centred')
 
-    def manual_set_angles(self, interact=True, proj_ref=5,
+    def manual_set_angles(self, interact=True, p0=5,
                           num_images=None, ang_range=None):
         """
         Manually define the number of images in 360 degrees. Defaults to 
@@ -192,7 +192,7 @@ class TomoScan(object):
         reference image.
         
         # interact:   Run in interactive mode (True/False)
-        # proj_ref:   Projection to use as initial or reference projection.
+        # p0:         Projection to use as initial or reference projection.
                       Recommended to be greater than 1 (due to acquisiton 
                       spacing issues in intital projections)   
         # num_images: If not in interact mode, manually specify number 
@@ -200,6 +200,8 @@ class TomoScan(object):
         # ang_range:  If not in interact mode, manually specify angular range 
                       of images (must be multiple of 180)
         """
+        self.p0 = p0
+
         if interact:
             backend = matplotlib.get_backend()
             err = ("Matplotlib running inline. Plot interaction not possible."
@@ -213,15 +215,14 @@ class TomoScan(object):
             ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])  
             ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
             
-            ax_array[0].imshow(self.im_stack[:, :, proj_ref])
-            ax_array[1].imshow(self.im_stack[:, :, proj_ref])
+            ax_array[0].imshow(self.im_stack[:, :, p0])
+            ax_array[1].imshow(self.im_stack[:, :, p0])
             ax_array[0].axis('off')
             ax_array[1].axis('off')
             fig.tight_layout()
             fig.subplots_adjust(bottom=0.2)
             nfiles = self.im_stack.shape[-1] + 1
-            window_slider = Slider(ax_slider, 'Image', proj_ref,
-                                   nfiles, valinit=0)
+            window_slider = Slider(ax_slider, 'Image', p0, nfiles, valinit=0)
             store_button = Button(ax_button, r'Save - 360')
             
             def slider_update(val):
@@ -233,9 +234,8 @@ class TomoScan(object):
             
             def store_data(label):
                 # Check this is correct - proj_ref!!!
-                self.num_images = int(window_slider.val) - proj_ref + 1
+                self.num_images = int(window_slider.val) - p0 + 1
                 self.angles = np.linspace(0, 360, self.num_images)
-                self.p0 = proj_ref
                 plt.close()
                 
             store_button.on_clicked(store_data)
@@ -247,8 +247,7 @@ class TomoScan(object):
             self.angles = np.linspace(0, ang_range, num_images)
             self.im_stack = self.im_stack[:, :, :num_images]
         
-    def reconstruct(self, downsample=(4, 4, 1), pre_filter=True,
-                    kernel=9, save=True):
+    def reconstruct(self, downsample=(4, 4, 1), pre_filter=True, kernel=9):
         
         if self.cor_offset <= 0:
             images = self.im_stack[:, -self.cor_offset:,
@@ -269,12 +268,10 @@ class TomoScan(object):
                               filter=None, circle=True)
 
             self.recon_data[:, :, j] = imagetmp
-            if save:
-                save_folder = os.path.join(self.folder, 'reconstruction')
-                if not os.path.exists(save_folder):
-                    os.makedirs(save_folder)
-                fpath = os.path.join(save_folder, '%04d.tif' % j)
-                imsave(fpath, imagetmp)
+            save_folder = os.path.join(self.folder, 'reconstruction')
+            if not os.path.exists(save_folder):
+                os.makedirs(save_folder)
+            imsave(os.path.join(save_folder, '%04d.tif' % j), imagetmp)
 
         
 class LoadProjections(TomoScan):
