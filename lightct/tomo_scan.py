@@ -75,6 +75,7 @@ class TomoScan(object):
         """
         histogram = np.histogram(self.im_stack[:, :, projection], 255)
         plt.plot(histogram[0])
+        plt.show()
         
     def auto_set_angles(self, order, p0=5, plot=True):
         """
@@ -113,6 +114,7 @@ class TomoScan(object):
             plt.ylabel('Thresholded Pixels Relative to Image 1')
             plt.text(minimas[0][0] + p0, np.max(diff), r'$360^{\circ}$',
                      horizontalalignment='center', verticalalignment='bottom')
+        plt.show()
                      
         print('\n%i images in a 360 rotation. \n\n If this is incorrect '
               'either rerun with a different value for order or use the manual'
@@ -184,17 +186,19 @@ class TomoScan(object):
         ax_array[0].set_title('Uncropped')
         ax_array[1].set_title('Cropped and centred')
 
+        plt.show()
+
     def manual_set_angles(self, interact=True, p0=5,
                           num_images=None, ang_range=None):
         """
         Manually define the number of images in 360 degrees. Defaults to 
         interactive mode in which images can be compared against initial, 
         reference image.
-        
+
         # interact:   Run in interactive mode (True/False)
         # p0:         Projection to use as initial or reference projection.
-                      Recommended to be greater than 1 (due to acquisiton 
-                      spacing issues in intital projections)   
+                      Recommended to be greater than 1 (due to acquisition
+                      spacing issues in initial projections)
         # num_images: If not in interact mode, manually specify number 
                       of images
         # ang_range:  If not in interact mode, manually specify angular range 
@@ -239,6 +243,7 @@ class TomoScan(object):
                 plt.close()
                 
             store_button.on_clicked(store_data)
+            plt.show()
             return window_slider, store_button
 
         else:
@@ -275,8 +280,9 @@ class TomoScan(object):
 
         
 class LoadProjections(TomoScan):
-    
+
     def __init__(self, load_folder):
+
         self.folder = load_folder
         files = [f for f in os.listdir(load_folder) if f[-4:] == '.tif']
         im_shape = imread(os.path.join(self.folder, files[0])).shape
