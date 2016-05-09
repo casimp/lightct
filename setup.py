@@ -6,14 +6,14 @@ except ImportError:
 
 setup(
     name='lightct',
-    version='0.0.1',
+    version='0.0.2',
     author='L.Courtois, C. Simpson',
     author_email='c.a.simpson01@gmail.com',
     packages=['lightct'],
     url='https://github.com/casimp/lightct',
     license='LICENSE.txt',
     description='Visual light computed tomography.',
-    keywords = ['ct', 'vlct', 'computed tomography'],
+    keywords=['ct', 'vlct', 'computed tomography'],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT License",
