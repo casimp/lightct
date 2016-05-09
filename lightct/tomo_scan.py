@@ -50,7 +50,7 @@ class TomoScan(object):
         self.im_stack = np.zeros(dims)
 
         print('\n\n')
-        # Acquires defined number of images as quickly as possible (saves hsv)
+        # Acquires defined number of images (saves v from hsv)
         for i in range(num_proj):
             _, im = camera.read()
             self.im_stack[:, :, i] = color.rgb2hsv(im)[:, :, 2]
@@ -205,15 +205,26 @@ class TomoScan(object):
             images = self.im_stack[:, self.cor_offset:]
         else:
             images = self.im_stack[:, :self.cor_offset]
-        images = images[:, :, self.num_images + self.p0]
-
+        images = images[:, :, self.p0:self.num_images + self.p0]
         images = downscale_local_mean(images, downsample + (1, ))
-        
-        if pre_filter is not False:
-            for i in range(images.shape[-1]): 
+        recon_height, recon_width = images.shape[:2]
+        self.recon_data = np.zeros((recon_width, recon_width, recon_height))
+
+        if pre_filter is True:
+            print('Applying median filter...')
+            for i in range(images.shape[-1]):
+                sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
+                                 int(20 * (i + 1) / images.shape[-1]),
+                                 100 * ((i + 1) / images.shape[-1])))
+                sys.stdout.flush()
                 images[:, :, i] = medfilt(images[:, :, i], kernel_size=kernel)
 
-        for j in range(self.height):
+        print('\nReconstructing...')
+        for j in range(recon_height):
+            sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
+                             int(20 * (j + 1) / recon_height),
+                             100 * ((j + 1) / recon_height)))
+            sys.stdout.flush()
             sino_tmp = np.squeeze(images[j, :, :])
             image_tmp = iradon(sino_tmp, theta=self.angles,
                                filter=None, circle=True)
@@ -245,7 +256,7 @@ class LoadProjections(TomoScan):
         im_shape = imread(os.path.join(self.folder, files[0])).shape
         self.im_stack = np.zeros(im_shape + (len(files), ))
         for idx, fname in enumerate(files):
-            sys.stdout.write("\rProgress: [{0:20s}] {1:.0f}%".format('#' * 
+            sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
                              int(20*(idx + 1) / len(files)),
                              100*((idx + 1)/len(files))))
             sys.stdout.flush()
