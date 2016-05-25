@@ -40,6 +40,8 @@ class TomoScan(object):
         self.recon_data = None
 
         camera = cv2.VideoCapture(camera_port)
+        camera.set(3, 2000)
+        camera.set(4, 2000)
         _, im = camera.read()
         try:
             dims = im[:, :, 2].shape + (num_proj, )
