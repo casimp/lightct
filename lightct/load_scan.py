@@ -178,7 +178,7 @@ class LoadProjections(object):
         self.angles = np.linspace(0, ang_range, num_images)
         self.num_images = num_images
         
-    def set_crop(self, width, top, bottom):
+    def set_crop(self, width, top, bottom, plot=True):
         """
         Crop...
         """
@@ -190,24 +190,24 @@ class LoadProjections(object):
         self.crop = ()
         for i in (width, -width, top, -bottom): 
             self.crop += (None,) if i == 0 else (i,)
-        
-        left, right, top, bottom = self.crop
-        
-        images_per_degree = self.num_images / 360
-        degrees = [0, 60, 120]
-        image_nums = [int(images_per_degree * deg) for deg in degrees]
-        
-        fig, ax_array = plt.subplots(1, 3, figsize=(8, 3))
 
-        for ax, i in zip(ax_array, image_nums):
-            ax.imshow(images[top:bottom, left:right, i])
-            ax.text(0.15, 0.88, r'$%0d^\circ$' % (i * 360 / self.num_images), 
-                    size=14, transform = ax.transAxes,
-                    va = 'center', ha = 'center')
-            ax.xaxis.set_ticklabels([])
-            ax.yaxis.set_ticklabels([])
-        fig.tight_layout()
-        plt.show()
+        
+        if plot:
+            left, right, top, bottom = self.crop
+            
+            images_per_degree = self.num_images / 360
+            degrees = [0, 60, 120]
+            image_nums = [int(images_per_degree * deg) for deg in degrees]
+            fig, ax_array = plt.subplots(1, 3, figsize=(8, 3))
+            for ax, i in zip(ax_array, image_nums):
+                ax.imshow(images[top:bottom, left:right, i])
+                ax.text(0.15, 0.88, r'$%0d^\circ$' % (i * 360/self.num_images), 
+                        size=14, transform = ax.transAxes,
+                        va = 'center', ha = 'center')
+                ax.xaxis.set_ticklabels([])
+                ax.yaxis.set_ticklabels([])
+            fig.tight_layout()
+            plt.show()
                 
     def reconstruct(self, downsample=(4, 4), crop=True, 
                     median_filter=False, kernel=9):

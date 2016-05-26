@@ -28,7 +28,29 @@ def test_set_angles():
     
 def test_auto_centre():
     scan_data = LoadProjections(proj_path)
+    scan_data.set_angles(21, 360)
     scan_data.auto_centre(plot=False)
+    
+def test_set_centre():
+    scan_data = LoadProjections(proj_path)
+    scan_data.set_angles(21, 360)
+    scan_data.set_centre(-40)
+    
+def test_set_crop():
+    scan_data = LoadProjections(proj_path)
+    scan_data.set_angles(21, 360)
+    scan_data.set_centre(-40)
+    scan_data.set_crop(100, 100, 100, plot=False)
+    scan_data.set_crop(0, 0, 0, plot=False)
+    
+def test_reconstruction():
+    scan_data = LoadProjections(proj_path)
+    scan_data.set_angles(21, 360)
+    scan_data.set_centre(-40)
+    scan_data.set_crop(100, 100, 100)
+    scan_data.reconstruct(downsample=(4,4), crop=True, 
+                          median_filter=True, kernel=3)
+
 #
 #def test_map():
 #    start = Room("Start", "You can go west and down a hole.")
