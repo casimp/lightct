@@ -138,7 +138,7 @@ class TomoScan(object):
         """
         self.cor_offset = cor
         
-    def auto_centre(self, window=400):
+    def auto_centre(self, window=400, plot=True):
         """
         Automatic method for finding the centre of rotation.
         
@@ -164,12 +164,13 @@ class TomoScan(object):
         minima = np.argmin(diff)
         self.cor_offset = win_range[minima]
 
-        plt.plot(win_range, diff)
-        plt.plot(self.cor_offset, np.min(diff), '*')
-        plt.ylabel('Standard deviation (original v 180deg flipped)')
-        plt.xlabel('2 * Centre correction (pixels)')
-
-        recentre_plot(np.copy(self.im_stack[:, :, self.p0]), self.cor_offset)
+        if plot:
+            plt.plot(win_range, diff)
+            plt.plot(self.cor_offset, np.min(diff), '*')
+            plt.ylabel('Standard deviation (original v 180deg flipped)')
+            plt.xlabel('2 * Centre correction (pixels)')
+    
+            recentre_plot(np.copy(self.im_stack[:, :, self.p0]), self.cor_offset)
         
     def manual_set_angles(self, p0=5):
         """
@@ -235,6 +236,7 @@ class TomoScan(object):
             ax.xaxis.set_ticklabels([])
             ax.yaxis.set_ticklabels([])
         fig.tight_layout()
+        plt.show()
                 
     def reconstruct(self, downsample=(4, 4), crop=True, 
                     median_filter=False, kernel=9):
