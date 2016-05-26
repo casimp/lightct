@@ -22,7 +22,7 @@ install:
   - conda info -a
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION matplotlib numpy scipy scikit-image
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip nose numpy scipy scikit-image matplotlib
   - source activate test-environment
   - python setup.py install
 
