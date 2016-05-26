@@ -23,6 +23,7 @@ install:
 
   # Replace dep1 dep2 ... with your dependencies
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy scikit-image matplotlib
+  - conda install -c https://conda.anaconda.org/menpo opencv3
   - source activate test-environment
   - python setup.py install
 
