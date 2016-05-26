@@ -130,6 +130,14 @@ class TomoScan(object):
               'either rerun with a different value for est_nproj or use the '
               'manual method.' % self.num_images)
         
+    def set_centre(self, cor):
+        """
+        Define the centre of rotation.
+        
+        # window:     Window width to search across (pixels).
+        """
+        self.cor_offset = cor
+        
     def auto_centre(self, window=400):
         """
         Automatic method for finding the centre of rotation.
@@ -163,35 +171,40 @@ class TomoScan(object):
 
         recentre_plot(np.copy(self.im_stack[:, :, self.p0]), self.cor_offset)
         
-    def manual_set_angles(self, interact=True, p0=5, num_images=None,
-                          ang_range=None):
+    def manual_set_angles(self, p0=5):
         """
         Manually define the number of images in 360 degrees. Defaults to 
         interactive mode in which images can be compared against initial, 
         reference image.
 
-        # interact:   Run in interactive mode (True/False)
         # p0:         Projection to use as initial or reference projection.
                       Recommended to be greater than 1 (due to acquisition
                       spacing issues in initial projections)
-        # num_images: If not in interact mode, manually specify number 
-                      of images
-        # ang_range:  If not in interact mode, manually specify angular range 
-                      of images (must be multiple of 180)
         """
         self.p0 = p0
 
-        if interact:
-            interact = SetAngleInteract(self.im_stack, self.p0)
-            interact.interact()
-            self.angles = interact.angles
-            self.num_images = interact.num_images
+        interact = SetAngleInteract(self.im_stack, self.p0)
+        interact.interact()
+        self.angles = interact.angles
+        self.num_images = interact.num_images
 
-        else:
-            error = 'Images must cover a rotational range of 180 or 360 deg'
-            assert (ang_range == 180) or (ang_range == 360), error
-            self.angles = np.linspace(0, ang_range, num_images)
-            self.num_images = num_images
+    def set_angles(self, num_images, ang_range=360, p0=5):
+        """
+        Manually define the number of images in 360 degrees. 
+
+        # num_images: Specify number of images
+        # ang_range:  Specify angular range (must be multiple of 180)
+        # p0:         Projection to use as initial or reference projection.
+                      Recommended to be greater than 1 (due to acquisition
+                      spacing issues in initial projections)
+
+        """
+        self.p0 = p0
+
+        error = 'Images must cover a rotational range of 180 or 360 deg'
+        assert (ang_range == 180) or (ang_range == 360), error
+        self.angles = np.linspace(0, ang_range, num_images)
+        self.num_images = num_images
         
     def set_crop(self, width, top, bottom):
         """
