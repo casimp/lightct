@@ -6,7 +6,7 @@ Created on Thu May 26 22:25:14 2016
 """
 
 from nose.tools import *
-from lightct.tomo_scan import LoadProjections
+from lightct.load_scan import LoadProjections
 import os
 
 
@@ -21,9 +21,14 @@ def test_auto_angles():
     scan_data = LoadProjections(proj_path)
     scan_data.auto_set_angles(20, plot=False)
     
-#    center.add_paths({'north': north, 'south': south})
-#    assert_equal(center.go('north'), north)
-#    assert_equal(center.go('south'), south)
+def test_set_angles():
+    scan_data = LoadProjections(proj_path)
+    scan_data.set_angles(21, 360)
+
+    
+def test_auto_centre():
+    scan_data = LoadProjections(proj_path)
+    scan_data.auto_centre(plot=False)
 #
 #def test_map():
 #    start = Room("Start", "You can go west and down a hole.")
