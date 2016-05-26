@@ -10,7 +10,7 @@ from lightct.load_scan import LoadProjections
 import os
 
 
-proj_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'test_scan\projections')
+proj_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), r'test_scan/projections')
 
 def test_load():
     scan_data = LoadProjections(proj_path)
@@ -47,7 +47,7 @@ def test_reconstruction():
     scan_data = LoadProjections(proj_path)
     scan_data.set_angles(21, 360)
     scan_data.set_centre(-40)
-    scan_data.set_crop(100, 100, 100)
+    scan_data.set_crop(100, 100, 100, plot=False)
     scan_data.reconstruct(downsample=(4,4), crop=True, 
                           median_filter=True, kernel=3)
 
