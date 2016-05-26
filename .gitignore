@@ -21,7 +21,9 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.travis.yml
 
 # Extra
 
 lightct/test/*
+.idea/
