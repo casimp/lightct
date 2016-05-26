@@ -35,6 +35,7 @@ class TomoScan(object):
         self.folder = folder
         self.p0 = 0
         self.cor_offset = 0
+        self.crop = None, None, None
         self.num_images = None
         self.angles = None
         self.recon_data = None
@@ -84,20 +85,19 @@ class TomoScan(object):
         plt.plot(histogram[0])
         plt.show()
         
-    def auto_set_angles(self, order, p0=5, plot=True):
+    def auto_set_angles(self, est_nproj, p0=5, plot=True):
         """
         Attempts to automatically locate image at 360 degrees (and multiples
         of 360 degrees). Alignment based on difference calculation between 
         reference projection each subsequent projections. 
         
-        # order:      Window in which to search for minimas in the
-                      difference calculations - should be approx equal to
-                      *half* the number of projections in 360
+        # est_nproj:  Estimated number of projections in 360 degrees
         # p0:         Projection to use as initial or reference projection.
                       Recommended to be greater than 1 (due to acquisition
                       spacing issues in initial projections)
         # plot:       Plot the difference results
         """
+        order = est_nproj // 2
         self.p0 = p0
         ref = downscale_local_mean(self.im_stack[:, :, p0], (3, 3))
         diff = np.nan * np.ones((self.im_stack.shape[-1] - p0))
@@ -127,8 +127,8 @@ class TomoScan(object):
         plt.show()
                      
         print('\n%i images in a 360 rotation. \n\n If this is incorrect '
-              'either rerun with a different value for order or use the manual'
-              ' method.' % self.num_images)
+              'either rerun with a different value for est_nproj or use the '
+              'manual method.' % self.num_images)
         
     def auto_centre(self, window=400):
         """
@@ -193,7 +193,38 @@ class TomoScan(object):
             self.angles = np.linspace(0, ang_range, num_images)
             self.num_images = num_images
         
-    def reconstruct(self, downsample=(4, 4), pre_filter=True, kernel=9):
+    def set_crop(self, width, top, bottom):
+        """
+        Crop...
+        """
+        if self.cor_offset >= 0:
+            images = self.im_stack[:, self.cor_offset:]
+        else:
+            images = self.im_stack[:, :self.cor_offset]
+            
+        self.crop = ()
+        for i in (width, -width, top, -bottom): 
+            self.crop += (None,) if i == 0 else (i,)
+        
+        left, right, top, bottom = self.crop
+        
+        images_per_degree = self.num_images / 360
+        degrees = [0, 60, 120]
+        image_nums = [int(images_per_degree * deg) for deg in degrees]
+        
+        fig, ax_array = plt.subplots(1, 3, figsize=(8, 3))
+
+        for ax, i in zip(ax_array, image_nums):
+            ax.imshow(images[top:bottom, left:right, i])
+            ax.text(0.15, 0.88, r'$%0d^\circ$' % (i * 360 / self.num_images), 
+                    size=14, transform = ax.transAxes,
+                    va = 'center', ha = 'center')
+            ax.xaxis.set_ticklabels([])
+            ax.yaxis.set_ticklabels([])
+        fig.tight_layout()
+                
+    def reconstruct(self, downsample=(4, 4), crop=True, 
+                    median_filter=False, kernel=9):
         """
         Reconstruct the data using a radon transform. Reconstructed slices
         saved in folder specified upon class creation.
@@ -207,12 +238,18 @@ class TomoScan(object):
             images = self.im_stack[:, self.cor_offset:]
         else:
             images = self.im_stack[:, :self.cor_offset]
+            
         images = images[:, :, self.p0:self.num_images + self.p0]
+        
+        if crop:
+            left, right, top, bottom = self.crop
+            images = images[top:bottom, left:right]
+            
         images = downscale_local_mean(images, downsample + (1, ))
         recon_height, recon_width = images.shape[:2]
         self.recon_data = np.zeros((recon_width, recon_width, recon_height))
 
-        if pre_filter is True:
+        if median_filter:
             print('Applying median filter...')
             for i in range(images.shape[-1]):
                 sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
