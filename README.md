@@ -1,7 +1,7 @@
-[![Build Status](https://travis-ci.org/casimp/lightct.svg?branch=master)](https://travis-ci.org/casimp/lightct)
-
 lightct
 =======
+
+[![Build Status](https://travis-ci.org/casimp/lightct.svg?branch=master)](https://travis-ci.org/casimp/lightct)
 
 What is lightct?
 ----------------
