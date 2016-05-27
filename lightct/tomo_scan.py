@@ -15,6 +15,31 @@ from skimage import color
 
 from lightct.load_scan import LoadProjections
 
+def image_acquisition(num_proj, camera_port=0, wait=0, hsv='v'):
+    hsv_dict = {'h':0, 's':1, 'v':2}
+    camera = cv2.VideoCapture(camera_port)
+    camera.set(3, 2000)
+    camera.set(4, 2000)
+    try:
+        dims = camera.read()[1][:, :, 2].shape + (num_proj, )
+    except TypeError:
+        error = ('Camera returning None. Check camera settings (port) and'
+                 ' ensure camera is not being run by other software.')
+        raise TypeError(error)
+    im_stack = np.zeros(dims)
+
+    # Acquires defined number of images (saves slice from hsv)
+    for i in range(num_proj):
+        _, im = camera.read()
+        im_stack[:, :, i] = color.rgb2hsv(im)[:, :, hsv_dict[hsv]]
+        sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
+                         int(20*(i + 1) / num_proj),
+                         100*((i + 1)/num_proj)))
+        sys.stdout.flush()
+        time.sleep(wait)
+    del camera
+    return im_stack
+
 
 class TomoScan(LoadProjections):
     
@@ -39,30 +64,7 @@ class TomoScan(LoadProjections):
         self.angles = None
         self.recon_data = None
         
-        hsv_dict = {'h':0, 's':1, 'v':2}
-
-        camera = cv2.VideoCapture(camera_port)
-        camera.set(3, 2000)
-        camera.set(4, 2000)
-        try:
-            dims = camera.read()[1][:, :, 2].shape + (num_proj, )
-        except TypeError:
-            error = ('Camera returning None. Check camera settings (port) and'
-                     ' ensure camera is not being run by other software.')
-            raise TypeError(error)
-        self.im_stack = np.zeros(dims)
-
-        # Acquires defined number of images (saves slice from hsv)
-        for i in range(num_proj):
-            _, im = camera.read()
-            self.im_stack[:, :, i] = color.rgb2hsv(im)[:, :, hsv_dict[hsv]]
-            sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
-                             int(20*(i + 1) / num_proj),
-                             100*((i + 1)/num_proj)))
-            sys.stdout.flush()
-            time.sleep(wait)
-        del camera
-
+        self.im_stack = image_acquisition(num_proj, camera_port, wait, hsv)
         self.height, self.width = self.im_stack.shape[:2]
 
         if save:
