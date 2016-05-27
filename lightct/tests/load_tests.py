@@ -24,12 +24,15 @@ def test_load():
 
 @patch("matplotlib.pyplot.show")
 def test_auto_angles(mock_show):
+    mock_show.return_value = None
+    mock_show.return_value = None
     scan_data = LoadProjections(proj_path)
     scan_data.auto_set_angles(20)
     
     
 @patch("matplotlib.pyplot.show")
 def test_manual_angles(mock_show):
+    mock_show.return_value = None
     scan_data = LoadProjections(proj_path)
     scan_data.manual_set_angles()
     
@@ -41,6 +44,7 @@ def test_set_angles():
     
 @patch("matplotlib.pyplot.show")
 def test_auto_centre(mock_show):
+    mock_show.return_value = None
     scan_data = LoadProjections(proj_path)
     scan_data.set_angles(21, 360)
     scan_data.auto_centre()
@@ -54,6 +58,7 @@ def test_set_centre():
 
 @patch("matplotlib.pyplot.show")
 def test_set_crop(mock_show):
+    mock_show.return_value = None
     scan_data = LoadProjections(proj_path)
     scan_data.set_angles(21, 360)
     scan_data.set_centre(-40)
