@@ -25,7 +25,6 @@ def test_load():
 @patch("matplotlib.pyplot.show")
 def test_auto_angles(mock_show):
     mock_show.return_value = None
-    mock_show.return_value = None
     scan_data = LoadProjections(proj_path)
     scan_data.auto_set_angles(20)
     

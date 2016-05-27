@@ -19,7 +19,7 @@ from lightct.load_scan import LoadProjections
 class TomoScan(LoadProjections):
     
     def __init__(self, num_proj, folder, camera_port=0,
-                 wait=0, save=True):
+                 wait=0, save=True, hsv='v'):
         """
         Acquires specified number of projections for analysis and
         reconstruction. The specified number must ensure that a rotational
@@ -28,6 +28,8 @@ class TomoScan(LoadProjections):
         # num_proj:  Number of projections to acquire (must cover > 360deg)
         # folder:    Path to folder for data storage. Projections and
                      reconstructed slices will be saved here.
+        # hsv:       Extract either the hue (h), saturation (s) or variance(v)
+                     from the image matrix.
         """
         self.folder = folder
         self.p0 = 0
@@ -36,6 +38,8 @@ class TomoScan(LoadProjections):
         self.num_images = None
         self.angles = None
         self.recon_data = None
+        
+        hsv_dict = {'h':0, 's':1, 'v':2}
 
         camera = cv2.VideoCapture(camera_port)
         camera.set(3, 2000)
@@ -53,7 +57,7 @@ class TomoScan(LoadProjections):
         # Acquires defined number of images (saves v from hsv)
         for i in range(num_proj):
             _, im = camera.read()
-            self.im_stack[:, :, i] = color.rgb2hsv(im)[:, :, 2]
+            self.im_stack[:, :, i] = color.rgb2hsv(im)[:, :, hsv_dict[hsv]]
             sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
                              int(20*(i + 1) / num_proj),
                              100*((i + 1)/num_proj)))
