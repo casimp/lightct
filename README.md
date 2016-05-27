@@ -19,7 +19,7 @@ lightct is built on Python’s scientific stack (numpy, scipy, matplotlib, sciki
 
 https://www.continuum.io/downloads
 
-lightct works with both Python 2 and 3 and has been tested under the following conditions:
+lightct works with both Python 2 and 3, although Python 3 is now the recommended version unless you have a good reason to do otherwise! lightct has been tested under the following conditions:
 
 -	Python: version 2.7, 3.4+
 -	numpy: version 1.10
@@ -27,11 +27,11 @@ lightct works with both Python 2 and 3 and has been tested under the following c
 -	matplotlib: version 1.5
 -	scikit-image: version 0.11
 
-The package also leverages opencv for the acquisition of images:
+The package also leverages OpenCV for the acquisition of images:
 
 -	opencv: version 3.1
 
-OpenCV can be installed on an Anaconda flavoured build of python by running the following in the command prompt:
+OpenCV can be installed on an Anaconda flavoured build of Python by running the following in the command prompt:
 
 ```
 conda install -c https://conda.binstar.org/menpo opencv3
@@ -48,7 +48,7 @@ pip install lightct
 
 This command will download the stable version of lightct from the Python Package Index and install it to your system.
 
-Alternatively, you can install from the most recent distribution using the setup.py script. The source is stored in the GitHub repo, which can be browsed at:
+Alternatively, you can install the most recent distribution using the setup.py script. The source is stored in the GitHub repo, which can be browsed at:
 
 https://github.com/casimp/lightct
 
