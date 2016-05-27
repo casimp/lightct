@@ -49,7 +49,7 @@ def test_reconstruction():
     scan_data.set_centre(-40)
     scan_data.set_crop(100, 100, 100, plot=False)
     scan_data.reconstruct(downsample=(4,4), crop=True, 
-                          median_filter=True, kernel=3)
+                          median_filter=True, kernel=3, save=False)
 
 #
 #def test_map():

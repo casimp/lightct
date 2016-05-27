@@ -210,7 +210,7 @@ class LoadProjections(object):
             plt.show()
                 
     def reconstruct(self, downsample=(4, 4), crop=True, 
-                    median_filter=False, kernel=9):
+                    median_filter=False, kernel=9, save=True):
         """
         Reconstruct the data using a radon transform. Reconstructed slices
         saved in folder specified upon class creation.
@@ -255,8 +255,9 @@ class LoadProjections(object):
                                filter=None, circle=True)
 
             self.recon_data[:, :, j] = image_tmp
-            save_folder = os.path.join(self.folder, 'reconstruction')
-            if not os.path.exists(save_folder):
-                os.makedirs(save_folder)
-            imsave(os.path.join(save_folder, '%04d.tif' % j), image_tmp)
+            if save:            
+                save_folder = os.path.join(self.folder, 'reconstruction')
+                if not os.path.exists(save_folder):
+                    os.makedirs(save_folder)
+                imsave(os.path.join(save_folder, '%04d.tif' % j), image_tmp)
 
