@@ -53,4 +53,4 @@ Documentation
 
 Please see the lightct-guide for more information:
 
-https://github.com/casimp/lightct/blob/master/lightct_guide.ipynb
+https://github.com/casimp/lightct/blob/master/docs/lightct_guide.ipynb

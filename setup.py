@@ -7,10 +7,11 @@ except ImportError:
 setup(
     name='lightct',
     version='0.0.2',
-    author='L.Courtois, C. Simpson',
+    author='C. Simpson, L.Courtois',
     author_email='c.a.simpson01@gmail.com',
     packages=['lightct'],
     url='https://github.com/casimp/lightct',
+    scripts=['bin/interactive_reload.py', 'bin/interactive_lightct.py'],
     license='LICENSE.txt',
     description='Visual light computed tomography.',
     keywords=['ct', 'vlct', 'computed tomography'],
