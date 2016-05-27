@@ -21,9 +21,10 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.coverage
 
 # Extra
 
 lightct/tests/example_scan
-lightct/tests/test_scan/reconstruction
+lightct/tests/test_scan/projections/*
 .idea/
