@@ -29,6 +29,7 @@ class LoadProjections(object):
         self.folder = folder
         self.p0 = 0
         self.cor_offset = 0
+        self.crop = None, None, None, None
         self.num_images = None
         self.angles = None
 
