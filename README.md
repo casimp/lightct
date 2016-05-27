@@ -6,16 +6,22 @@ lightct
 What is lightct?
 ----------------
 
+lightct is a python package for visual light computed tomography. With just a webcam and a rotating stage the package will allow for the acquisition of 2D projections and the reconstruction of objects in 3D.
+
+This package will be showcased at the Royal Society Summer Exhibition (4th - 10th July 2016), allowing members of the public to run their own synchrotron style experiment:
+
+https://royalsociety.org/events/summer-science-exhibition/exhibits/4d-science/
+
 Requirements
 ------------
 
-lightct is built on Python’s scientific stack (numpy, scipy, matplotlib, scikit-image). Testing and development were carried out using the Anaconda (v 2.5.0) package manager, which built with the following versions:
+lightct is built on Python’s scientific stack (numpy, scipy, matplotlib, scikit-image). Development was carried out using the Anaconda (v 2.5.0) package manager, which built with the following versions:
 
--	Python: version 2.7.11, 3.5.1
--	numpy: version 1.10.4
+-	Python: version 2.7, 3.3+
+-	numpy: version 1.10
 -	scipy: version 0.17
 -	matplotlib: version 1.5
--	scikit-image: version 0.11.3
+-	scikit-image: version 0.11
 
 The package also leverages opencv for the acquisition of images:
 
@@ -45,4 +51,6 @@ python setup.py install
 Documentation
 -------------
 
-Documentation is hosted by readthedocs.
+Please see the lightct-guide for more information:
+
+https://github.com/casimp/lightct/blob/master/lightct_guide.ipynb
