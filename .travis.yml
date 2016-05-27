@@ -24,6 +24,7 @@ install:
   # Replace dep1 dep2 ... with your dependencies
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip mock nose numpy scipy scikit-image matplotlib
   - source activate test-environment
+  - conda install -c https://conda.binstar.org/menpo opencv3
   - pip install python-coveralls
   - python setup.py install
 before_script: # configure a headless display to test plot generation
