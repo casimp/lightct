@@ -15,9 +15,13 @@ https://royalsociety.org/events/summer-science-exhibition/exhibits/4d-science/
 Requirements
 ------------
 
-lightct is built on Python’s scientific stack (numpy, scipy, matplotlib, scikit-image). Development was carried out using the Anaconda (v 2.5.0) package manager, which built with the following versions:
+lightct is built on Python’s scientific stack (numpy, scipy, matplotlib, scikit-image). Development was carried out using the Anaconda (v 2.5.0) package manager, which is the recommended route for the installation of Python and the scientific stack:
 
--	Python: version 2.7, 3.3+
+https://www.continuum.io/downloads
+
+lightct works with both Python 2 and 3 and has been tested under the following conditions:
+
+-	Python: version 2.7, 3.4+
 -	numpy: version 1.10
 -	scipy: version 0.17
 -	matplotlib: version 1.5
@@ -27,18 +31,24 @@ The package also leverages opencv for the acquisition of images:
 
 -	opencv: version 3.1
 
-Installation
-------------
+OpenCV can be installed on an Anaconda flavoured build of python by running the following in the command prompt:
 
-Installing lightct is easily done using pip. Assuming you have pip installed, just run the following from the command-line:
+```
+conda install -c https://conda.binstar.org/menpo opencv3
+```
+
+Installation of lightct
+-----------------------
+
+Installing lightct is easily done using pip. Assuming you have pip installed (included with the Anaconda build), just run the following from the command-line:
 
 ```
 pip install lightct
 ```
 
-This command will download the latest version of lightct from the Python Package Index and install it to your system.
+This command will download the stable version of lightct from the Python Package Index and install it to your system.
 
-Alternatively, you can install from the distribution using the setup.py script. The source is stored in the GitHub repo, which can be browsed at:
+Alternatively, you can install from the most recent distribution using the setup.py script. The source is stored in the GitHub repo, which can be browsed at:
 
 https://github.com/casimp/lightct
 
