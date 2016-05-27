@@ -1,7 +1,7 @@
 lightct
 =======
 
-[![Build Status](https://travis-ci.org/casimp/lightct.svg?branch=master)](https://travis-ci.org/casimp/lightct)
+[![Build Status](https://travis-ci.org/casimp/lightct.svg?branch=master)](https://travis-ci.org/casimp/lightct) [![Coverage Status](https://coveralls.io/repos/github/casimp/lightct/badge.svg?branch=master)](https://coveralls.io/github/casimp/lightct?branch=master)
 
 What is lightct?
 ----------------

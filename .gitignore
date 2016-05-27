@@ -25,4 +25,5 @@ var/
 # Extra
 
 lightct/tests/example_scan
+lightct/tests/test_scan/reconstruction
 .idea/
