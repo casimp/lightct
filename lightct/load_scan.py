@@ -76,8 +76,8 @@ class LoadProjections(object):
         proj_nums = range(p0, self.im_stack.shape[-1])
 
        # data = downscale_local_mean(self.im_stack[:, :, p0: self.im_stack.shape[-1]], (3,3))
-       # tmp = data - ref
-       # diff = tmp.std()
+       # tmp = data - ref[:, :, np.newaxis]
+       # diff = tmp.std(axis=2)
 
         # Iterates across projections and calc/stores stdev from image_1
         for idx, i in enumerate(proj_nums):
