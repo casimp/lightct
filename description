@@ -1,0 +1,5 @@
+lightct is a python package for visual light computed tomography. With just a webcam and a rotating stage the package will allow for the acquisition of 2D projections and the reconstruction of objects in 3D.
+
+This package will be showcased at the Royal Society Summer Exhibition (4th - 10th July 2016), allowing members of the public to run their own synchrotron style experiment:
+
+https://royalsociety.org/events/summer-science-exhibition/exhibits/4d-science/
