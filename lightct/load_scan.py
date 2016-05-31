@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.misc import imread, imsave
 from scipy.signal import medfilt, argrelmin
-from skimage.transform import iradon, downscale_local_mean
+from skimage.transform import iradon, iradon_sart, downscale_local_mean
 
 from lightct.plot_funcs import recentre_plot, SetAngleInteract
 
@@ -129,23 +129,22 @@ class LoadProjections(object):
         """
         self.cor_offset = cor
         
-    def auto_centre(self, window=400, downsample=(2,1), plot=True):
+    def auto_centre(self, window=400, downsample_y=2, plot=True):
         """
         Automatic method for finding the centre of rotation.
         
         # window:     Window width to search across (pixels).
         """
+        downsample = (downsample_y, 1)
         half_win = window // 2
         win_range = range(-half_win, half_win)
-
+        
         # Compare ref image with flipped 180deg counterpart
         ref_image = self.im_stack[:, half_win:-half_win, self.p0]
         ref = downscale_local_mean(ref_image, downsample)
-        im_180_image = self.im_stack[:, :, int(self.num_images / 2) + self.p0]
+        im_180_image = self.im_stack[:, :, self.num_images // 2 + self.p0]
         im_180 = downscale_local_mean(im_180_image, downsample)
         flipped = np.fliplr(im_180)
-        
-        half_win /= downsample[1]
         
         diff = np.nan * np.zeros(len(win_range))
 
@@ -157,16 +156,16 @@ class LoadProjections(object):
             diff[idx] = tmp.std()
             
         minima = np.argmin(diff)
-        self.cor_offset = win_range[minima] * downsample[1]
+        self.cor_offset = win_range[minima]
         print('COR = %i' % self.cor_offset)
 
         if plot:
-            plt.plot([i * downsample[1] for i in win_range], diff)
+            plt.plot([i for i in win_range], diff)
             plt.plot(self.cor_offset, np.min(diff), '*')
             plt.ylabel('Standard deviation (original v 180deg flipped)')
             plt.xlabel('2 * Centre correction (pixels)')
-            
-            recentre_plot(np.copy(self.im_stack[:, :, self.p0]), self.cor_offset)
+            im_copy = np.copy(self.im_stack[:, :, self.p0])
+            recentre_plot(im_copy, self.cor_offset)
         
     def manual_set_angles(self, p0=5):
         """
@@ -216,8 +215,8 @@ class LoadProjections(object):
             fig.tight_layout()
             plt.show()
                 
-    def reconstruct(self, downsample=(4, 4), crop=True, 
-                    median_filter=False, kernel=9, save=True):
+    def reconstruct(self, downsample=(4, 4), crop=True, median_filter=False, 
+                    kernel=9, recon_alg='fbp', sart_iters=1, save=True):
         """
         Reconstruct the data using a radon transform. Reconstructed slices
         saved in folder specified upon class creation.
@@ -227,6 +226,14 @@ class LoadProjections(object):
         # pre_filter: If True apply median filter to data before reconstructing
         # kernel:     Kernel size to use for median filter
         """
+        if recon_alg is 'fbp':
+            iradon_alg = iradon
+            kwargs = {'filter': None, 'circle': True}
+        elif recon_alg is 'sart':
+            iradon_alg = iradon_sart
+            kwargs = {}
+            
+            
         if self.cor_offset >= 0:
             images = self.im_stack[:, self.cor_offset:]
         else:
@@ -258,8 +265,11 @@ class LoadProjections(object):
                              100 * ((j + 1) / recon_height)))
             sys.stdout.flush()
             sino_tmp = np.squeeze(images[j, :, :])
-            image_tmp = iradon(sino_tmp, theta=self.angles,
-                               filter=None, circle=True)
+            image_tmp = iradon_alg(sino_tmp, theta=self.angles, **kwargs)
+            if recon_alg is 'sart' and sart_iters > 1:
+                for i in range(sart_iters - 1):
+                    image_tmp = iradon_alg(sino_tmp, theta=self.angles, 
+                                           image=image_tmp, **kwargs)
 
             self.recon_data[:, :, j] = image_tmp
             if save:            
