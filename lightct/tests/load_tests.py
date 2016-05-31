@@ -28,6 +28,12 @@ def test_auto_angles(mock_show):
     scan_data = LoadProjections(proj_path)
     scan_data.auto_set_angles(20)
     
+@patch("matplotlib.pyplot.show")
+def test_plot_hist(mock_show):
+    mock_show.return_value = None
+    scan_data = LoadProjections(proj_path)
+    scan_data.plot_histogram()
+    
     
 @patch("matplotlib.pyplot.show")
 def test_manual_angles(mock_show):
