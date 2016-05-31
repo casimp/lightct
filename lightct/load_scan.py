@@ -56,53 +56,26 @@ class LoadProjections(object):
         histogram = np.histogram(self.im_stack[:, :, proj], 255)
         plt.plot(histogram[0])
         plt.show()
-        
-    def auto_set_angles(self, est_nproj, p0=5, plot=True):
+
+    def set_angles(self, num_images, ang_range=360, p0=5):
         """
-        Attempts to automatically locate image at 360 degrees (and multiples
-        of 360 degrees). Alignment based on difference calculation between 
-        reference projection each subsequent projections. 
-        
-        # est_nproj:  Estimated number of projections in 360 degrees
+        Manually define the number of images in 360 degrees. 
+
+        # num_images: Specify number of images
+        # ang_range:  Specify angular range (must be multiple of 180)
         # p0:         Projection to use as initial or reference projection.
                       Recommended to be greater than 1 (due to acquisition
                       spacing issues in initial projections)
-        # plot:       Plot the difference results
+
         """
-        order = est_nproj // 2
         self.p0 = p0
-        ref = downscale_local_mean(self.im_stack[:, :, p0], (3, 3))
-        diff = np.nan * np.ones((self.im_stack.shape[-1] - p0))
-        proj_nums = range(p0, self.im_stack.shape[-1])
 
-        # Iterates across projections and calc/stores stdev from image_1
-        for idx, i in enumerate(proj_nums):
-            current = downscale_local_mean(self.im_stack[:, :, i], (3, 3))
-            tmp = current - ref
-            diff[idx] = tmp.std()
-
-        # Searches for local minimas - order is essentially window width / 2
-        minimas = argrelmin(np.array(diff), order=order)
-        self.num_images = minimas[0][0] + 1
-        self.angles = np.linspace(0, 360, self.num_images, dtype=int)
+        error = 'Images must cover a rotational range of 180 or 360 deg'
+        assert (ang_range == 180) or (ang_range == 360), error
+        self.angles = np.linspace(0, ang_range, num_images)
+        self.num_images = num_images
         
-        if plot:
-            plt.figure()
-            plt.plot(proj_nums, diff)
-            plt.plot(minimas[0] + p0, np.array(diff)[minimas], 'r*')
-            plt.plot([minimas[0][0] + p0, minimas[0][0] + p0],
-                     [0, np.max(diff)], 'r--')
-            plt.xlabel('Image number')
-            plt.ylabel('Thresholded Pixels Relative to Image 1')
-            plt.text(minimas[0][0] + p0, np.max(diff), r'$360^{\circ}$',
-                     horizontalalignment='center', verticalalignment='bottom')
-        plt.show()
-                     
-        print('\n%i images in a 360 rotation.\n\n If this is incorrect '
-              'either rerun with a different value for est_nproj or use the '
-              'manual method.' % self.num_images)
-
-    def auto_set_angles_numpy(self, est_nproj, p0=5, downscale=True, plot=True):
+    def auto_set_angles(self, est_nproj, p0=5, downscale=True, plot=True):
         """
         Attempts to automatically locate image at 360 degrees (and multiples
         of 360 degrees). Alignment based on difference calculation between 
@@ -147,9 +120,6 @@ class LoadProjections(object):
         print('\n%i images in a 360 rotation.\n\nIf this is incorrect '
               'either rerun with a different value for est_nproj or use the '
               'manual method.' % self.num_images)
-        # Iterates across projections and calc/stores stdev from image_1
-
-
         
     def set_centre(self, cor):
         """
@@ -159,41 +129,7 @@ class LoadProjections(object):
         """
         self.cor_offset = cor
         
-    def auto_centre(self, window=400, plot=True):
-        """
-        Automatic method for finding the centre of rotation.
-        
-        # window:     Window width to search across (pixels).
-        """
-        half_win = window // 2
-        win_range = range(-half_win, half_win)
-        # Compare ref image with flipped 180deg counterpart
-        ref = self.im_stack[:, half_win:-half_win, self.p0]
-        im_180 = self.im_stack[:, :, int(self.num_images / 2) + self.p0]
-        flipped = np.fliplr(im_180)
-        
-        diff = np.nan * np.zeros(len(win_range))
-
-        # Flip win_range as we are working on flipped data
-        for idx, i in enumerate(win_range[::-1]):
-            
-            cropped = flipped[:, half_win + i: -half_win + i]
-            tmp = cropped - ref
-            diff[idx] = tmp.std()
-        
-        minima = np.argmin(diff)
-        self.cor_offset = win_range[minima]
-        print('COR = %i' % self.cor_offset)
-
-        if plot:
-            plt.plot(win_range, diff)
-            plt.plot(self.cor_offset, np.min(diff), '*')
-            plt.ylabel('Standard deviation (original v 180deg flipped)')
-            plt.xlabel('2 * Centre correction (pixels)')
-            
-            recentre_plot(np.copy(self.im_stack[:, :, self.p0]), self.cor_offset)
-            
-    def auto_centre_down(self, window=400, downsample=(2,1), plot=True):
+    def auto_centre(self, window=400, downsample=(2,1), plot=True):
         """
         Automatic method for finding the centre of rotation.
         
@@ -231,7 +167,6 @@ class LoadProjections(object):
             plt.xlabel('2 * Centre correction (pixels)')
             
             recentre_plot(np.copy(self.im_stack[:, :, self.p0]), self.cor_offset)
-    
         
     def manual_set_angles(self, p0=5):
         """
@@ -249,24 +184,6 @@ class LoadProjections(object):
         interact.interact()
         self.angles = interact.angles
         self.num_images = interact.num_images
-
-    def set_angles(self, num_images, ang_range=360, p0=5):
-        """
-        Manually define the number of images in 360 degrees. 
-
-        # num_images: Specify number of images
-        # ang_range:  Specify angular range (must be multiple of 180)
-        # p0:         Projection to use as initial or reference projection.
-                      Recommended to be greater than 1 (due to acquisition
-                      spacing issues in initial projections)
-
-        """
-        self.p0 = p0
-
-        error = 'Images must cover a rotational range of 180 or 360 deg'
-        assert (ang_range == 180) or (ang_range == 360), error
-        self.angles = np.linspace(0, ang_range, num_images)
-        self.num_images = num_images
         
     def set_crop(self, width, top, bottom, plot=True):
         """
