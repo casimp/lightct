@@ -226,13 +226,6 @@ class LoadProjections(object):
         # pre_filter: If True apply median filter to data before reconstructing
         # kernel:     Kernel size to use for median filter
         """
-        if recon_alg is 'fbp':
-            iradon_alg = iradon
-            kwargs = {'filter': None, 'circle': True}
-        elif recon_alg is 'sart':
-            iradon_alg = iradon_sart
-            kwargs = {}
-            
             
         if self.cor_offset >= 0:
             images = self.im_stack[:, self.cor_offset:]
@@ -265,12 +258,16 @@ class LoadProjections(object):
                              100 * ((j + 1) / recon_height)))
             sys.stdout.flush()
             sino_tmp = np.squeeze(images[j, :, :])
-            image_tmp = iradon_alg(sino_tmp, theta=self.angles, **kwargs)
-            if recon_alg is 'sart' and sart_iters > 1:
+            
+            if recon_alg is 'sart':
+                image_tmp = iradon_sart(sino_tmp, theta=self.angles)
                 for i in range(sart_iters - 1):
-                    image_tmp = iradon_alg(sino_tmp, theta=self.angles, 
-                                           image=image_tmp, **kwargs)
-
+                    image_tmp = iradon_sart(sino_tmp, theta=self.angles, 
+                                            image=image_tmp)
+            else:
+                image_tmp = iradon(sino_tmp, theta=self.angles, 
+                                   filter=None, circle=True)
+                                       
             self.recon_data[:, :, j] = image_tmp
             if save:            
                 save_folder = os.path.join(self.folder, 'reconstruction')
