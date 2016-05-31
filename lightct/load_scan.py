@@ -75,10 +75,6 @@ class LoadProjections(object):
         diff = np.nan * np.ones((self.im_stack.shape[-1] - p0))
         proj_nums = range(p0, self.im_stack.shape[-1])
 
-       # data = downscale_local_mean(self.im_stack[:, :, p0: self.im_stack.shape[-1]], (3,3))
-       # tmp = data - ref[:, :, np.newaxis]
-       # diff = tmp.std(axis=2)
-
         # Iterates across projections and calc/stores stdev from image_1
         for idx, i in enumerate(proj_nums):
             current = downscale_local_mean(self.im_stack[:, :, i], (3, 3))
@@ -102,9 +98,58 @@ class LoadProjections(object):
                      horizontalalignment='center', verticalalignment='bottom')
         plt.show()
                      
-        print('\n%i images in a 360 rotation. \n\n If this is incorrect '
+        print('\n%i images in a 360 rotation.\n\n If this is incorrect '
               'either rerun with a different value for est_nproj or use the '
               'manual method.' % self.num_images)
+
+    def auto_set_angles_numpy(self, est_nproj, p0=5, downscale=True, plot=True):
+        """
+        Attempts to automatically locate image at 360 degrees (and multiples
+        of 360 degrees). Alignment based on difference calculation between 
+        reference projection each subsequent projections. 
+        
+        # est_nproj:  Estimated number of projections in 360 degrees
+        # p0:         Projection to use as initial or reference projection.
+                      Recommended to be greater than 1 (due to acquisition
+                      spacing issues in initial projections)
+        # plot:       Plot the difference results
+        """
+        order = est_nproj // 2
+        self.p0 = p0
+        
+        diff = np.nan * np.ones((self.im_stack.shape[-1] - p0))
+        proj_nums = range(p0, self.im_stack.shape[-1])
+
+        ref = self.im_stack[:, :, p0]
+        data = self.im_stack[:, :, p0:]
+        
+        tmp = data - ref[:, :, np.newaxis]
+        tmp = tmp.reshape(-1, tmp.shape[-1])
+    
+        diff = tmp.std(axis=0)
+
+        minimas = argrelmin(diff, order=order)
+        self.num_images = minimas[0][0] + 1
+        self.angles = np.linspace(0, 360, self.num_images, dtype=int)
+        
+        if plot:
+            plt.figure()
+            plt.plot(proj_nums, diff)
+            plt.plot(minimas[0] + p0, np.array(diff)[minimas], 'r*')
+            plt.plot([minimas[0][0] + p0, minimas[0][0] + p0],
+                     [0, np.max(diff)], 'r--')
+            plt.xlabel('Image number')
+            plt.ylabel('Thresholded Pixels Relative to Image 1')
+            plt.text(minimas[0][0] + p0, np.max(diff), r'$360^{\circ}$',
+                     horizontalalignment='center', verticalalignment='bottom')
+        plt.show()
+                     
+        print('\n%i images in a 360 rotation.\n\nIf this is incorrect '
+              'either rerun with a different value for est_nproj or use the '
+              'manual method.' % self.num_images)
+        # Iterates across projections and calc/stores stdev from image_1
+
+
         
     def set_centre(self, cor):
         """
@@ -122,7 +167,6 @@ class LoadProjections(object):
         """
         half_win = window // 2
         win_range = range(-half_win, half_win)
-
         # Compare ref image with flipped 180deg counterpart
         ref = self.im_stack[:, half_win:-half_win, self.p0]
         im_180 = self.im_stack[:, :, int(self.num_images / 2) + self.p0]
@@ -139,14 +183,55 @@ class LoadProjections(object):
         
         minima = np.argmin(diff)
         self.cor_offset = win_range[minima]
+        print('COR = %i' % self.cor_offset)
 
         if plot:
             plt.plot(win_range, diff)
             plt.plot(self.cor_offset, np.min(diff), '*')
             plt.ylabel('Standard deviation (original v 180deg flipped)')
             plt.xlabel('2 * Centre correction (pixels)')
-    
+            
             recentre_plot(np.copy(self.im_stack[:, :, self.p0]), self.cor_offset)
+            
+    def auto_centre_down(self, window=400, downsample=(2,1), plot=True):
+        """
+        Automatic method for finding the centre of rotation.
+        
+        # window:     Window width to search across (pixels).
+        """
+        half_win = window // 2
+        win_range = range(-half_win, half_win)
+
+        # Compare ref image with flipped 180deg counterpart
+        ref_image = self.im_stack[:, half_win:-half_win, self.p0]
+        ref = downscale_local_mean(ref_image, downsample)
+        im_180_image = self.im_stack[:, :, int(self.num_images / 2) + self.p0]
+        im_180 = downscale_local_mean(im_180_image, downsample)
+        flipped = np.fliplr(im_180)
+        
+        half_win /= downsample[1]
+        
+        diff = np.nan * np.zeros(len(win_range))
+
+        # Flip win_range as we are working on flipped data
+        for idx, i in enumerate(win_range[::-1]):
+            
+            cropped = flipped[:, half_win + i: -half_win + i]
+            tmp = cropped - ref
+            diff[idx] = tmp.std()
+            
+        minima = np.argmin(diff)
+        self.cor_offset = win_range[minima] * downsample[1]
+        print('COR = %i' % self.cor_offset)
+
+        if plot:
+            plt.plot([i * downsample[1] for i in win_range], diff)
+            plt.plot(self.cor_offset, np.min(diff), '*')
+            plt.ylabel('Standard deviation (original v 180deg flipped)')
+            plt.xlabel('2 * Centre correction (pixels)')
+            
+            recentre_plot(np.copy(self.im_stack[:, :, self.p0]), self.cor_offset)
+    
         
     def manual_set_angles(self, p0=5):
         """
