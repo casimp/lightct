@@ -84,3 +84,5 @@ def test_reconstruction():
                           median_filter=True, kernel=3, save=False)
     scan_data.reconstruct(downsample=(8,8), crop=False, 
                           median_filter=False, save=True)
+    scan_data.reconstruct(downsample=(16,16), recon_alg='sart', sart_iters=2,
+                          save=False)
