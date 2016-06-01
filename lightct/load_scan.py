@@ -18,7 +18,7 @@ from lightct.plot_funcs import recentre_plot, SetAngleInteract
 
 class LoadProjections(object):
 
-    def __init__(self, folder):
+    def __init__(self, folder, im_type='tif'):
         """
         Load a previously acquired series of projections for analysis and
         reconstruction.
@@ -33,16 +33,16 @@ class LoadProjections(object):
         self.num_images = None
         self.angles = None
 
-        files = [f for f in os.listdir(folder) if f[-4:] == '.tif']
+        files = [f for f in os.listdir(folder) if f[-4:] == '.%s' % im_type]
         im_shape = imread(os.path.join(self.folder, files[0])).shape
         self.im_stack = np.zeros(im_shape + (len(files), ))
         for idx, fname in enumerate(files):
-            sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
-                             int(20*(idx + 1) / len(files)),
-                             100*((idx + 1)/len(files))))
-            sys.stdout.flush()
-            f = os.path.join(self.folder, fname)
-            self.im_stack[:, :, idx] = imread(f)
+                sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
+                                 int(20*(idx + 1) / len(files)),
+                                 100*((idx + 1)/len(files))))
+                sys.stdout.flush()
+                f = os.path.join(self.folder, fname)
+                self.im_stack[:, :, idx] = imread(f)
 
         self.height = self.im_stack.shape[0]
         self.width = self.im_stack.shape[1]
@@ -216,7 +216,8 @@ class LoadProjections(object):
             plt.show()
                 
     def reconstruct(self, downsample=(4, 4), crop=True, median_filter=False, 
-                    kernel=9, recon_alg='fbp', sart_iters=1, save=True):
+                    kernel=9, recon_alg='fbp', sart_iters=1, 
+                    crop_circle=True, save=True):
         """
         Reconstruct the data using a radon transform. Reconstructed slices
         saved in folder specified upon class creation.
@@ -241,6 +242,13 @@ class LoadProjections(object):
         images = downscale_local_mean(images, downsample + (1, ))
         recon_height, recon_width = images.shape[:2]
         self.recon_data = np.zeros((recon_width, recon_width, recon_height))
+        
+#        if crop_circle:
+#            w = int((recon_width**2 / 2)**0.5) 
+#            w = w if (w - recon_width) % 2 == 0 else w - 1
+#            w0 =   int((recon_width - w) / 2  )
+#            wf = int(w0 + w)
+#            self.recon_data = self.recon_data[w0:wf, w0:wf]
 
         if median_filter:
             print('Applying median filter...')
@@ -267,7 +275,9 @@ class LoadProjections(object):
             else:
                 image_tmp = iradon(sino_tmp, theta=self.angles, 
                                    filter=None, circle=True)
-                                       
+#            if crop_circle:
+#                image_tmp = image_tmp[w0:wf, w0:wf]
+                
             self.recon_data[:, :, j] = image_tmp
             if save:            
                 save_folder = os.path.join(self.folder, 'reconstruction')
