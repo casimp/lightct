@@ -26,7 +26,7 @@ class LoadProjections(object):
         # folder:    Path to folder where projections are stored. Reconstructed
                      slices will also be saved here.
         """
-        self.folder = folder
+        self.folder = os.path.split(os.path.abspath(folder))[0]
         self.p0 = 0
         self.cor_offset = 0
         self.crop = None, None, None, None
@@ -34,14 +34,14 @@ class LoadProjections(object):
         self.angles = None
 
         files = [f for f in os.listdir(folder) if f[-4:] == '.%s' % im_type]
-        im_shape = imread(os.path.join(self.folder, files[0])).shape
+        im_shape = imread(os.path.join(folder, files[0])).shape
         self.im_stack = np.zeros(im_shape + (len(files), ))
         for idx, fname in enumerate(files):
                 sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
                                  int(20*(idx + 1) / len(files)),
                                  100*((idx + 1)/len(files))))
                 sys.stdout.flush()
-                f = os.path.join(self.folder, fname)
+                f = os.path.join(folder, fname)
                 self.im_stack[:, :, idx] = imread(f)
 
         self.height = self.im_stack.shape[0]
