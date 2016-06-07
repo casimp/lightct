@@ -31,6 +31,7 @@ data = dict(zip(data_id, data_vals))
 # Acquire or load projections
 if data['acquire']:
     scan = lightct.TomoScan(int(data['n_acq']), proj_folder)
+    lines[data_id.index('acquire') + 1][0] = str(int(0))
 else:
     print('Loading projections')
     scan = lightct.LoadProjections(proj_folder)
