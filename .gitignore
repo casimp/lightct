@@ -7,7 +7,6 @@
 /docs/_*
 
 # Distribution / packaging
-bin/
 build/
 develop-eggs/
 dist/
