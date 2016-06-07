@@ -9,6 +9,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import shutil
 from scipy.misc import imread, imsave
 from scipy.signal import medfilt, argrelmin
 from skimage.transform import iradon, iradon_sart, downscale_local_mean
@@ -243,12 +244,8 @@ class LoadProjections(object):
         recon_height, recon_width = images.shape[:2]
         self.recon_data = np.zeros((recon_width, recon_width, recon_height))
         
-#        if crop_circle:
-#            w = int((recon_width**2 / 2)**0.5) 
-#            w = w if (w - recon_width) % 2 == 0 else w - 1
-#            w0 =   int((recon_width - w) / 2  )
-#            wf = int(w0 + w)
-#            self.recon_data = self.recon_data[w0:wf, w0:wf]
+
+           
 
         if median_filter:
             print('Applying median filter...')
@@ -260,6 +257,15 @@ class LoadProjections(object):
                 images[:, :, i] = medfilt(images[:, :, i], kernel_size=kernel)
 
         print('\nReconstructing...')
+        if save:            
+            save_folder = os.path.join(self.folder, 'reconstruction')
+            
+            if not os.path.exists(save_folder):
+                os.makedirs(save_folder)
+            for the_file in os.listdir(save_folder):
+                file_path = os.path.join(save_folder, the_file)
+                if os.path.isfile(file_path):
+                        os.unlink(file_path)        
         for j in range(recon_height):
             sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
                              int(20 * (j + 1) / recon_height),
@@ -279,9 +285,16 @@ class LoadProjections(object):
 #                image_tmp = image_tmp[w0:wf, w0:wf]
                 
             self.recon_data[:, :, j] = image_tmp
-            if save:            
-                save_folder = os.path.join(self.folder, 'reconstruction')
-                if not os.path.exists(save_folder):
-                    os.makedirs(save_folder)
+            
+        if crop_circle:
+            w = int((recon_width**2 / 2)**0.5) 
+            w = w if (w - recon_width) % 2 == 0 else w - 1
+            w0 =   int((recon_width - w) / 2  )
+            wf = int(w0 + w)
+            self.recon_data = self.recon_data[w0:wf, w0:wf]
+            
+        if save:    
+            for j in range(recon_height):
+                image_tmp = self.recon_data[:, :, j]
                 imsave(os.path.join(save_folder, '%04d.tif' % j), image_tmp)
 
