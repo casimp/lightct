@@ -9,6 +9,7 @@ import sys
 import numpy as np
 import os
 
+print(sys.argv)
 working_dir = os.path.split(sys.argv[1])[0]
 sample_name = sys.argv[2]
 
