@@ -9,9 +9,8 @@ import sys
 import numpy as np
 import os
 
-print(sys.argv)
-working_dir = os.path.split(sys.argv[1])[0]
-sample_name = sys.argv[2]
+working_dir = os.path.split(sys.argv[0])[0]
+sample_name = sys.argv[1]
 
 proj_folder = os.path.join(working_dir, os.path.join(sample_name, 'projections'))
 info_file = os.path.join(working_dir, os.path.join(sample_name, r'info.txt'))
@@ -63,13 +62,12 @@ else:
 if data['reconstruct']:
     down_ratio = (int(data['downsample']), ) *2
     scan.reconstruct(down_ratio)
+    lines[data_id.index('im_dims1') + 1][0] = str(int(scan.recon_data.shape[0]))
+    lines[data_id.index('im_dims2') + 1][0] = str(int(scan.recon_data.shape[1]))
+    lines[data_id.index('im_dims3') + 1][0] = str(int(scan.recon_data.shape[2]))
 
 with open(info_file, 'w') as f:
             
-    #f.write('%s\n' % lines[0][0])
     for idx, line in enumerate(lines):
-        #print(line[0], line[1])
-        #line[0] = data_vals[idx]
         line_comb = ' # '.join([str(i) for i in line])
-        print(line_comb)
         f.write('%s\n' % line_comb)
