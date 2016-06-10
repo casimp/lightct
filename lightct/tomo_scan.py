@@ -15,8 +15,9 @@ from skimage import color
 
 from lightct.load_scan import LoadProjections
 
+
 def image_acquisition(num_proj, camera_port=0, wait=0, hsv='v'):
-    hsv_dict = {'h':0, 's':1, 'v':2}
+    hsv_dict = {'h': 0, 's': 1, 'v': 2}
     camera = cv2.VideoCapture(camera_port)
     camera.set(3, 2000)
     camera.set(4, 2000)

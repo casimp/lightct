@@ -12,7 +12,8 @@ import os
 working_dir = os.path.split(sys.argv[0])[0]
 sample_name = sys.argv[1]
 
-proj_folder = os.path.join(working_dir, os.path.join(sample_name, 'projections'))
+sample_folder = os.path.join(working_dir, sample_name)
+proj_folder = os.path.join(sample_folder, 'projections')
 info_file = os.path.join(working_dir, os.path.join(sample_name, r'info.txt'))
 
 data_id = ['n_acq', 'n_est', 'n_proj', 'centre_win', 'cor', 
@@ -30,7 +31,7 @@ data = dict(zip(data_id, data_vals))
   
 # Acquire or load projections
 if data['acquire']:
-    scan = lightct.TomoScan(int(data['n_acq']), proj_folder)
+    scan = lightct.TomoScan(int(data['n_acq']), sample_folder)
     lines[data_id.index('acquire') + 1][0] = str(int(0))
 else:
     print('Loading projections')
