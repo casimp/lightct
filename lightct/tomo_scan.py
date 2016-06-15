@@ -17,8 +17,10 @@ from skimage import color
 
 from lightct.load_scan import LoadProjections
 
+plt.style.use('ggplot')
 
-def image_acquisition(num_proj, camera_port=0, wait=0, hsv='v', fancy_out=True):
+def image_acquisition(num_proj, camera_port=0, wait=0,
+                      hsv='v', fancy_out=True):
     hsv_dict = {'h': 0, 's': 1, 'v': 2}
     camera = cv2.VideoCapture(camera_port)
     camera.set(3, 2000)
@@ -39,7 +41,7 @@ def image_acquisition(num_proj, camera_port=0, wait=0, hsv='v', fancy_out=True):
         ax.set_xlim([0, 1])
         ax.set_ylim([0, 1])
         ax.axis('off')
-        t = ax.text(0.5, 0.5, '0', fontsize=15, ha='center', va='center')
+        t = ax.text(0.5, 0.5, '0%%', fontsize=15, ha='center', va='center')
 
     # Acquires defined number of images (saves slice from hsv)
     for i in range(num_proj):
@@ -47,9 +49,9 @@ def image_acquisition(num_proj, camera_port=0, wait=0, hsv='v', fancy_out=True):
         im_stack[:, :, i] = color.rgb2hsv(im)[:, :, hsv_dict[hsv]]
         if fancy_out:
 
-            patch.set_theta1(90 - 360 * i /num_proj)
-            progress = 100 * i / num_proj
-            t.set_text('%02d' % progress)
+            patch.set_theta1(90 - 360 * (i+1) /num_proj)
+            progress = 100 * (i+1) / num_proj
+            t.set_text('%02d%%' % progress)
             plt.pause(0.001)
         else:
             sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
