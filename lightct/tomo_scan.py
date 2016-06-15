@@ -9,6 +9,8 @@ import time
 import os
 
 import cv2
+import matplotlib.pyplot as plt
+from matplotlib.patches import Wedge
 from scipy.misc import imsave
 import numpy as np
 from skimage import color
@@ -16,7 +18,7 @@ from skimage import color
 from lightct.load_scan import LoadProjections
 
 
-def image_acquisition(num_proj, camera_port=0, wait=0, hsv='v'):
+def image_acquisition(num_proj, camera_port=0, wait=0, hsv='v', fancy_out=True):
     hsv_dict = {'h': 0, 's': 1, 'v': 2}
     camera = cv2.VideoCapture(camera_port)
     camera.set(3, 2000)
@@ -29,16 +31,36 @@ def image_acquisition(num_proj, camera_port=0, wait=0, hsv='v'):
         raise TypeError(error)
     im_stack = np.zeros(dims)
 
+    if fancy_out:
+        fig, ax = plt.subplots(figsize=(4, 4))
+        patch = Wedge((.5, .5), .375, 90, 90, width=0.1)
+        ax.add_patch(patch)
+        ax.axis('equal')
+        ax.set_xlim([0, 1])
+        ax.set_ylim([0, 1])
+        ax.axis('off')
+        t = ax.text(0.5, 0.5, '0', fontsize=15, ha='center', va='center')
+
     # Acquires defined number of images (saves slice from hsv)
     for i in range(num_proj):
         _, im = camera.read()
         im_stack[:, :, i] = color.rgb2hsv(im)[:, :, hsv_dict[hsv]]
-        sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
-                         int(20*(i + 1) / num_proj),
-                         100*((i + 1)/num_proj)))
-        sys.stdout.flush()
+        if fancy_out:
+
+            patch.set_theta1(90 - 360 * i /num_proj)
+            progress = 100 * i / num_proj
+            t.set_text('%02d' % progress)
+            plt.pause(0.001)
+        else:
+            sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
+                             int(20*(i + 1) / num_proj),
+                             100*((i + 1)/num_proj)))
+            sys.stdout.flush()
         time.sleep(wait)
+
     del camera
+    if fancy_out:
+        plt.close()
     return im_stack
 
 
