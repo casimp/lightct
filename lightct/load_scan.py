@@ -8,6 +8,7 @@ import sys
 import os
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Wedge
 import numpy as np
 import shutil
 from scipy.misc import imread, imsave
@@ -222,7 +223,7 @@ class LoadProjections(object):
                 
     def reconstruct(self, downsample=(4, 4), crop=True, median_filter=False, 
                     kernel=9, recon_alg='fbp', sart_iters=1, 
-                    crop_circle=True, save=True):
+                    crop_circle=True, save=True, fancy_out=True):
         """
         Reconstruct the data using a radon transform. Reconstructed slices
         saved in folder specified upon class creation.
@@ -282,8 +283,8 @@ class LoadProjections(object):
         for j in range(recon_height):
             # Update figure every other slice
             if fancy_out and j % 2 == 0:
-                patch.set_theta1(90 - 360 * (j + 1) / num_proj)
-                progress = 100 * (j + 1) / num_proj
+                patch.set_theta1(90 - 360 * (j + 1) / recon_height)
+                progress = 100 * (j + 1) / recon_height
                 t.set_text('%02d%%' % progress)
                 plt.pause(0.001)
             else:

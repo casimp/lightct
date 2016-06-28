@@ -74,8 +74,9 @@ def test_set_crop(mock_show):
     scan_data.set_crop(0, 0, 0, plot=False)
     assert_equal(scan_data.crop, (None, None, None, None))
     
-    
-def test_reconstruction():
+@patch("matplotlib.pyplot.show")
+def test_reconstruction(mock_show):
+    mock_show.return_value = None
     scan_data = LoadProjections(proj_path)
     scan_data.set_angles(21, 360)
     scan_data.set_centre(-40)
