@@ -107,14 +107,15 @@ class LoadProjections(object):
         self.angles = np.linspace(0, 360, self.num_images, dtype=int)
         
         if plot:
-            plt.figure()
-            plt.plot(proj_nums, diff)
-            plt.plot(minimas[0] + p0, np.array(diff)[minimas], 'r*')
-            plt.plot([minimas[0][0] + p0, minimas[0][0] + p0],
+            fig, ax = plt.subplots()
+            fig.canvas.set_window_title('Projection Analysis')
+            ax.plot(proj_nums, diff)
+            ax.plot(minimas[0] + p0, np.array(diff)[minimas], 'r*')
+            ax.plot([minimas[0][0] + p0, minimas[0][0] + p0],
                      [0, np.max(diff)], 'r--')
-            plt.xlabel('Image number')
-            plt.ylabel('Thresholded Pixels Relative to Image 1')
-            plt.text(minimas[0][0] + p0, np.max(diff), r'$360^{\circ}$',
+            ax.set_xlabel('Image number')
+            ax.set_ylabel('Thresholded Pixels Relative to Image 1')
+            ax.text(minimas[0][0] + p0, np.max(diff), r'$360^{\circ}$',
                      horizontalalignment='center', verticalalignment='bottom')
         plt.show()
                      
@@ -161,10 +162,12 @@ class LoadProjections(object):
         print('COR = %i' % self.cor_offset)
 
         if plot:
-            plt.plot([i for i in win_range], diff)
-            plt.plot(self.cor_offset, np.min(diff), '*')
-            plt.ylabel('Standard deviation (original v 180deg flipped)')
-            plt.xlabel('2 * Centre correction (pixels)')
+            fig, ax = plt.subplots()
+            fig.canvas.set_window_title('Centre Analysis')
+            ax.plot([i for i in win_range], diff)
+            ax.plot(self.cor_offset, np.min(diff), '*')
+            ax.set_ylabel('Standard deviation (original v 180deg flipped)')
+            ax.set_xlabel('2 * Centre correction (pixels)')
             im_copy = np.copy(self.im_stack[:, :, self.p0])
             recentre_plot(im_copy, self.cor_offset)
         
@@ -206,6 +209,7 @@ class LoadProjections(object):
             degrees = [0, 60, 120]
             image_nums = [int(images_per_degree * deg) for deg in degrees]
             fig, ax_array = plt.subplots(1, 3, figsize=(8, 3))
+            fig.canvas.set_window_title('Crop Output')
             for ax, i in zip(ax_array, image_nums):
                 ax.imshow(images[top:bottom, left:right, i])
                 ax.text(0.15, 0.88, r'$%0d^\circ$' % (i * 360/self.num_images), 
@@ -243,9 +247,6 @@ class LoadProjections(object):
         images = downscale_local_mean(images, downsample + (1, ))
         recon_height, recon_width = images.shape[:2]
         self.recon_data = np.zeros((recon_width, recon_width, recon_height))
-        
-
-           
 
         if median_filter:
             print('Applying median filter...')
@@ -269,6 +270,7 @@ class LoadProjections(object):
 
         if fancy_out:
             fig, ax = plt.subplots(figsize=(4, 4))
+            fig.canvas.set_window_title('Reconstruction')
             patch = Wedge((.5, .5), .375, 90, 90, width=0.1)
             ax.add_patch(patch)
             ax.axis('equal')
@@ -278,8 +280,8 @@ class LoadProjections(object):
             t = ax.text(0.5, 0.5, '0%%', fontsize=15, ha='center', va='center')
 
         for j in range(recon_height):
-
-            if fancy_out:
+            # Update figure every other slice
+            if fancy_out and j % 2 == 0:
                 patch.set_theta1(90 - 360 * (j + 1) / num_proj)
                 progress = 100 * (j + 1) / num_proj
                 t.set_text('%02d%%' % progress)

@@ -7,6 +7,7 @@ import numpy as np
 
 def recentre_plot(image, cor_offset):
     fig, ax_array = plt.subplots(1, 2, figsize=(10, 6))
+    fig.canvas.set_window_title('Recentred Projection')
     height, width = image.shape
     if cor_offset <= 0:
         poly_pnts = [[width + cor_offset, 0], [width, 0],

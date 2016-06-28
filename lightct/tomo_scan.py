@@ -35,6 +35,7 @@ def image_acquisition(num_proj, camera_port=0, wait=0,
 
     if fancy_out:
         fig, ax = plt.subplots(figsize=(4, 4))
+        fig.canvas.set_window_title('Acquisition')
         patch = Wedge((.5, .5), .375, 90, 90, width=0.1)
         ax.add_patch(patch)
         ax.axis('equal')
