@@ -265,12 +265,30 @@ class LoadProjections(object):
             for the_file in os.listdir(save_folder):
                 file_path = os.path.join(save_folder, the_file)
                 if os.path.isfile(file_path):
-                        os.unlink(file_path)        
+                        os.unlink(file_path)
+
+        if fancy_out:
+            fig, ax = plt.subplots(figsize=(4, 4))
+            patch = Wedge((.5, .5), .375, 90, 90, width=0.1)
+            ax.add_patch(patch)
+            ax.axis('equal')
+            ax.set_xlim([0, 1])
+            ax.set_ylim([0, 1])
+            ax.axis('off')
+            t = ax.text(0.5, 0.5, '0%%', fontsize=15, ha='center', va='center')
+
         for j in range(recon_height):
-            sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
-                             int(20 * (j + 1) / recon_height),
-                             100 * ((j + 1) / recon_height)))
-            sys.stdout.flush()
+
+            if fancy_out:
+                patch.set_theta1(90 - 360 * (j + 1) / num_proj)
+                progress = 100 * (j + 1) / num_proj
+                t.set_text('%02d%%' % progress)
+                plt.pause(0.001)
+            else:
+                sys.stdout.write('\rProgress: [{0:20s}] {1:.0f}%'.format('#' *
+                                 int(20 * (j + 1) / recon_height),
+                                 100 * ((j + 1) / recon_height)))
+                sys.stdout.flush()
             sino_tmp = np.squeeze(images[j, :, :])
             
             if recon_alg is 'sart':
@@ -297,4 +315,7 @@ class LoadProjections(object):
             for j in range(recon_height):
                 image_tmp = self.recon_data[:, :, j]
                 imsave(os.path.join(save_folder, '%04d.tif' % j), image_tmp)
+
+        if fancy_out:
+            plt.close()
 
