@@ -64,6 +64,7 @@ class SetAngleInteract(object):
 
         assert backend != 'module://ipykernel.pylab.backend_inline', err
         fig, ax_array = plt.subplots(1, 2, figsize=(10, 5))
+        fig.canvas.set_window_title('Projection Analysis')
 
         ax_slider = plt.axes([0.2, 0.07, 0.5, 0.05])
         ax_button = plt.axes([0.81, 0.05, 0.1, 0.075])
