@@ -223,7 +223,7 @@ class LoadProjections(object):
                 
     def reconstruct(self, downsample=(4, 4), crop=True, median_filter=False, 
                     kernel=9, recon_alg='fbp', sart_iters=1, 
-                    crop_circle=True, save=True, fancy_out=True):
+                    crop_circle=False, save=True, fancy_out=True):
         """
         Reconstruct the data using a radon transform. Reconstructed slices
         saved in folder specified upon class creation.
@@ -310,7 +310,7 @@ class LoadProjections(object):
         if crop_circle:
             w = int((recon_width**2 / 2)**0.5) 
             w = w if (w - recon_width) % 2 == 0 else w - 1
-            w0 =   int((recon_width - w) / 2  )
+            w0 = int((recon_width - w) / 2 )
             wf = int(w0 + w)
             self.recon_data = self.recon_data[w0:wf, w0:wf]
             
